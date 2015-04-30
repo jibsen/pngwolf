@@ -4,6 +4,8 @@
 //
 // Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 //
+// Modified to use zopfli instead of 7-Zip.
+//
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
@@ -25,13 +27,7 @@
 #include <arpa/inet.h>
 #endif
 
-#include "Common/MyWindows.h"
-#include "Common/MyInitGuid.h"
-#include "7zip/IStream.h"
-#include "7zip/Compress/ZlibEncoder.h"
-#include "7zip/Common/FileStreams.h"
-#include "7zip/Common/InBuffer.h"
-#include "7zip/Common/StreamObjects.h"
+#include "zopfli/src/zopfli/zopfli.h"
 
 #include <signal.h>
 #include <stdlib.h>
@@ -51,6 +47,7 @@
 #include <math.h>
 #include <map>
 #include <bitset>
+#include <algorithm>
 
 #ifndef SIZE_MAX
 #define SIZE_MAX ((size_t)-1)
@@ -148,9 +145,9 @@ public:
   int zlib_windowBits;
   int zlib_memLevel;
   int zlib_strategy;
-  int szip_pass;
-  int szip_fast;
-  int szip_cycl;
+  int zop_iter;
+  bool zop_splitlast;
+  int zop_maxsplit;
 
   //
   Deflater* deflate_fast;
@@ -264,74 +261,43 @@ public:
   z_stream strm;
 };
 
-struct Deflate7zip : public Deflater {
+struct DeflateZopfli : public Deflater {
 public:
   std::vector<char> deflate(const std::vector<char>& inflated) {
 
-    NCompress::NZlib::CEncoder c;
-    PROPID algoProp = NCoderPropID::kAlgorithm;
-    PROPID passProp = NCoderPropID::kNumPasses;
-    PROPID fastProp = NCoderPropID::kNumFastBytes;
-    PROPID cyclProp = NCoderPropID::kMatchFinderCycles;
+    ZopfliOptions zopt;
+    unsigned char *pout = 0;
+    size_t outsize = 0;
 
-    PROPVARIANT v;
-    v.vt = VT_UI4;
+    ZopfliInitOptions(&zopt);
+
+    zopt.verbose = 1;
+    zopt.numiterations = zop_iter;
+    zopt.blocksplittinglast = zop_splitlast ? 1 : 0;
+    zopt.blocksplittingmax = zop_maxsplit;
 
     // TODO: figure out what to do with errors here
 
-    c.Create();
+    ZopfliCompress(&zopt, ZOPFLI_FORMAT_ZLIB,
+                   reinterpret_cast<const unsigned char *>(inflated.data()),
+                   inflated.size(), &pout, &outsize);
 
-    NCompress::NDeflate::NEncoder::CCOMCoder* d = 
-      c.DeflateEncoderSpec;
+    std::vector<char> deflated(pout, pout + outsize);
 
-    v.ulVal = szip_algo;
-    if (d->SetCoderProperties(&algoProp, &v, 1) != S_OK) {
-    }
-
-    v.ulVal = szip_pass;
-    if (d->SetCoderProperties(&passProp, &v, 1) != S_OK) {
-    }
-
-    v.ulVal = szip_fast;
-    if (d->SetCoderProperties(&fastProp, &v, 1) != S_OK) {
-    }
-
-    v.ulVal = szip_cycl;
-    if (d->SetCoderProperties(&cyclProp, &v, 1) != S_OK) {
-    }
-
-    CBufInStream* in_buf = new CBufInStream;
-
-    // TODO: find a way to use a a fixed buffer since we know
-    // the maximum size for it and don't use more than one. It
-    // might also be a good idea to keep the other objects for
-    // all the passes through this to avoid re-allocations and
-    // the possible failures that might go along with them.
-    CDynBufSeqOutStream* out_buf = new CDynBufSeqOutStream;
-    in_buf->Init((const Byte*)&inflated[0], inflated.size());
-    CMyComPtr<ISequentialInStream> in(in_buf);
-    CMyComPtr<ISequentialOutStream> out(out_buf);
-
-    if (c.Code(in, out, NULL, NULL, NULL) != S_OK) {
-    }
-
-    std::vector<char> deflated(out_buf->GetSize());
-    memcpy(&deflated[0], out_buf->GetBuffer(), deflated.size());
+    free(pout);
 
     return deflated;
   }
 
-  Deflate7zip(int pass, int fast, int cycl) :
-    szip_pass(pass),
-    szip_fast(fast),
-    szip_cycl(cycl),
-    szip_algo(1) {
+  DeflateZopfli(int iter, int splitlast, int maxsplit) :
+    zop_iter(iter),
+    zop_splitlast(splitlast),
+    zop_maxsplit(maxsplit) {
   }
 
-  int szip_pass;
-  int szip_fast;
-  int szip_cycl;
-  int szip_algo;
+  int zop_iter;
+  bool zop_splitlast;
+  int zop_maxsplit;
 };
 
 static const char PNG_MAGIC[] = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
@@ -701,7 +667,7 @@ void PngWolf::log_summary() {
       "best zlib deflated idat size: %0.0f\n"
       "total time spent optimizing:  %0.0f\n"
       "number of genomes evaluated:  %u\n"
-      "size of 7zip deflated data:   %u\n"
+      "size of zopfli deflated data:   %u\n"
       "size difference to original:  %d\n",
       best_genomes.back()->score(),
       difftime(time(NULL), program_begun_at),
@@ -954,7 +920,7 @@ void PngWolf::init_filters() {
   // individually and picks the filter that compresses the line
   // best. This may be a useful clue for the others, but tests
   // suggests this might interfere in cases where zlib is a poor
-  // estimator, tuning genomes too much for zlib instead of 7zip.
+  // estimator, tuning genomes too much for zlib instead of zopfli.
   // Generally this should be expected to perform poorly for very
   // small images. In the standard Alexa 1000 sample it performs
   // better than the specification's heuristic in 73% of cases;
@@ -1254,13 +1220,13 @@ void PngWolf::recompress() {
   best_deflated = deflate_good->deflate(best_inflated);
 
   // In my test sample in 1.66% of cases, using a high zlib level,
-  // zlib is able to produce smaller output than 7-Zip. So for the
+  // zlib is able to produce smaller output than zopfli. So for the
   // case where users do choose a high setting for zlib, reward
   // them by using zlib instead to recompress. Since zlib is fast,
   // this recompression should not be much of a performance hit.
 
   // TODO: This should be noted in the verbose output, otherwise
-  // this would make 7zip appear better than it is. In the longer
+  // this would make zopfli appear better than it is. In the longer
   // term perhaps the output should simply say what estimator and
   // what compressor was used and give the respective sizes.
 
@@ -1273,7 +1239,7 @@ void PngWolf::recompress() {
   // is separation of things you'd put into a library and what
   // is really more part of the command line application. Right
   // now run() should really do this, but then you could not
-  // abort 7zip easily. Also not sure what --best-idat-to ought
+  // abort zopfli easily. Also not sure what --best-idat-to ought
   // to do here. Might end up exposing a step() method and let
   // the command line part do logging and other things.
 
@@ -1459,7 +1425,7 @@ bool PngWolf::read_file() {
     }
   }
 
-  // For very large images the highest 7-Zip setting requires too
+  // For very large images the highest zopfli setting requires too
   // much time to be worth the saved bytes, especially as `pngout`
   // performs better for such images, at least if they are highly
   // redundant, anyway, so this option allows picking the highest
@@ -1468,7 +1434,7 @@ bool PngWolf::read_file() {
   // base value should configurable.
   if (auto_mpass) {
     double times = double(original_inflated.size()) / (64*1024.f);
-    szip_pass = 16 - std::max(1, int(floor(times)));
+    zop_iter = 16 - std::max(1, int(floor(times)));
   }
 
   return false;
@@ -1633,9 +1599,9 @@ help(void) {
     "  --zlib-strategy=<int>          zlib estimator strategy (default: 0)         \n"
     "  --zlib-window=<int>            zlib estimator window bits (default: 15)     \n"
     "  --zlib-memlevel=<int>          zlib estimator memory level (default: 8)     \n"
-    "  --7zip-mfb=<int>               7zip fast bytes 3..258 (default: 258)        \n"
-    "  --7zip-mpass=<int|auto>        7zip passes 0..15 (d: 2; > ~ slower, smaller)\n"
-    "  --7zip-mmc=<int>               7zip match finder cycles (d: 258)            \n"
+    "  --zopfli-iter=<int>            zopfli iterations (default: 15)              \n"
+    "  --zopfli-splitlast             zopfli split blocks after compression        \n"
+    "  --zopfli-maxsplit=<int>        zopfli max blocks to split into (default: 15)\n"
     "  --verbose-analysis             More details in initial image analysis       \n"
     "  --verbose-summary              More details in optimization summary         \n"
     "  --verbose-genomes              More details when improvements are found     \n"
@@ -1652,7 +1618,7 @@ help(void) {
     " use a similar approach to find a good arrangement of color palette entries). \n"
     "                                                                              \n"
     " To approximate the quality of a filter combination it compresses IDAT chunks \n"
-    " using `zlib` and ultimately uses the Deflate encoder in `7-Zip` to store the \n"
+    " using `zlib` and ultimately uses the Deflate encoder in `zopfli` to store the\n"
     " output image. It is slow because it recompresses the IDAT data fully for all \n"
     " filter combinations even if only minor changes are made or if two filter com-\n"
     " binations are merged, as `zlib` has no built-in support for caching analysis \n"
@@ -1661,7 +1627,8 @@ help(void) {
     " Output images should be saved even if you send SIGINT (~CTRL+C) to `pngwolf`.\n"
     " The machine-readable progress report format is based on YAML http://yaml.org/\n"
     " -----------------------------------------------------------------------------\n"
-    " Uses http://zlib.net/ and http://lancet.mit.edu/ga/ and http://www.7-zip.org/\n"
+    " Uses http://zlib.net/ and http://lancet.mit.edu/ga/ and                      \n"
+    " https://github.com/google/zopfli/                                            \n"
     " -----------------------------------------------------------------------------\n"
     " http://bjoern.hoehrmann.de/pngwolf/ (c) 2008-2011 http://bjoern.hoehrmann.de/\n"
     "");
@@ -1702,9 +1669,9 @@ main(int argc, char *argv[]) {
   int argZlibStrategy = 0;
   int argZlibMemlevel = 8;
   int argZlibWindow = 15;
-  int arg7zipFastBytes = 258;
-  int arg7zipPasses = 2;
-  int arg7zipCycles = 258;
+  int argZopfliIter = 15;
+  int argZopfliSplitLast = false;
+  int argZopfliMaxSplit = 15;
 
   bool argOkay = true;;
 
@@ -1723,6 +1690,10 @@ main(int argc, char *argv[]) {
     if (strcmp("--help", s) == 0) {
       argHelp = 1;
       break;
+
+    } else if (strcmp("--zopfli-splitlast", s) == 0) {
+      argZopfliSplitLast = true;
+      continue;
 
     } else if (strcmp("--verbose-analysis", s) == 0) {
       argVerboseAnalysis = true;
@@ -1839,22 +1810,12 @@ main(int argc, char *argv[]) {
               || argZlibStrategy == Z_HUFFMAN_ONLY
               || argZlibStrategy == Z_RLE;
 
-    } else if (strncmp("--7zip-mfb", s, nlen) == 0) {
-      arg7zipFastBytes = atoi(value);
-      argOkay &= arg7zipFastBytes >= 3;
-      argOkay &= arg7zipFastBytes <= 258;
+    } else if (strncmp("--zopfli-iter", s, nlen) == 0) {
+      argZopfliIter = atoi(value);
+      argOkay &= argZopfliIter > 0;
 
-    } else if (strncmp("--7zip-mpass", s, nlen) == 0) {
-      if (strcmp(value, "auto") == 0) {
-        argAutoMpass = true;
-      } else {
-        arg7zipPasses = atoi(value);
-        argOkay &= arg7zipPasses >= 1;
-        argOkay &= arg7zipPasses <= 15;
-      }
-
-    } else if (strncmp("--7zip-mmc", s, nlen) == 0) {
-      arg7zipCycles = atoi(value);
+    } else if (strncmp("--zopfli-maxsplit", s, nlen) == 0) {
+      argZopfliMaxSplit = atoi(value);
 
     } else {
       // TODO: error
@@ -1868,11 +1829,11 @@ main(int argc, char *argv[]) {
   }
 
   DeflateZlib fast(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
-  Deflate7zip good(arg7zipPasses, arg7zipFastBytes, arg7zipCycles);
+  DeflateZopfli good(argZopfliIter, argZopfliSplitLast, argZopfliMaxSplit);
 
-  wolf.szip_cycl = arg7zipCycles;
-  wolf.szip_fast = arg7zipFastBytes;
-  wolf.szip_pass = arg7zipPasses;
+  wolf.zop_iter = argZopfliIter;
+  wolf.zop_splitlast = argZopfliSplitLast;
+  wolf.zop_maxsplit = argZopfliMaxSplit;
   wolf.zlib_level = argZlibLevel;
   wolf.zlib_memLevel = argZlibMemlevel;
   wolf.zlib_strategy = argZlibStrategy;
