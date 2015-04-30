@@ -26,18 +26,16 @@ That is, in essence, what `pngwolf` does, over and over again. Further,
 the most widely used PNG encoders use the zlib library for compression.
 The zlib library favours speed over compression ratio in some cases, so
 whatever filters are selected to aid compression, the result with zlib
-may not be the smallest possible. The 7-Zip library by Igor Pavlov has
-a Deflate encoder that favours size over speed at certain settings. So,
-`pngwolf` attempts to make use of both: a fast zlib setting is used to
-estimate how well some filter combination aids compression, and when it
-gets bored, it uses 7-Zip to generate the final result.
+may not be the smallest possible. The zopfli library has a Deflate en-
+coder that favours size over speed at certain settings. So, `pngwolf`
+attempts to make use of both: a fast zlib setting is used to estimate
+how well some filter combination aids compression, and when it gets
+bored, it uses zopfli to generate the final result.
 
 Doing this `pngwolf` is able to compress some images better than other
 optimizers (like `OptiPNG`, `AdvanceCOMP`, `pngcrush`, and `pngout`),
 either because it finds better filter combinations then they do, or be-
-cause it uses 7-Zip's Deflate implementation (`AdvanceCOMP` uses that
-aswell, although an older version which sometimes performs better and
-sometimes worse, for reasons yet to be studied). It does not attempt to
+cause it uses zopfli's Deflate implementation. It does not attempt to
 make other optimizations, like converting indexed images to RGB format.
 
 None of the tools mentioned, including `pngwolf` follow any kind of ho-
@@ -77,23 +75,14 @@ program, results should not get lost, but should be stored anyway.
 
 To compile `pngwolf` you need three additional libraries:
 
-  * GAlib http://lancet.mit.edu/ga/dist/
-  * 7-Zip http://www.7-zip.org/download.html ("7-Zip Source code")
-  * zlib  http://zlib.net/
+  * GAlib  http://lancet.mit.edu/ga/dist/
+  * zopfli https://github.com/google/zopfli/
+  * zlib   http://zlib.net/
 
-Put these into `galib`, `7zip`, and `zlib` sub-directories into the
+Put these into `galib`, `zopfli`, and `zlib` sub-directories into the
 directory where pngwolf.cxx is located, and then either use the CMake
 utility (http://www.cmake.org/) on the `CMakeLists.txt`, or simply
 specify all the files specified in `CMakeLists.txt` as input to your
-compiler. The latter would look like:
+compiler.
 
-  % gcc -I7zip/CPP -Igalib pngwolf.cxx galib/ga/GA1DArrayGenome.C 
-      galib/ga/GAAllele.C ... -lstdc++ -o pngwolf
-
-If you are using 7-Zip 9.20 there are two bugs in 7-Zip that prevent
-gcc building https://sourceforge.net/support/tracker.php?aid=3200655
-it. To address that, apply the patch `sevenzip920.patch` like so:
-
-  % patch -p 0 < sevenzip920.patch
-
-I've done this successfully with Visual C++ 2010 and Cygwin gcc 4.3.4.
+Note: This version was modified to replace 7-Zip with zopfli.
