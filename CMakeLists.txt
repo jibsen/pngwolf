@@ -45,3 +45,7 @@ zopfli/src/zopfli/util.c
 zopfli/src/zopfli/zlib_container.c
 zopfli/src/zopfli/zopfli_lib.c
 )
+
+if (WIN32)
+  target_link_libraries(pngwolf ws2_32)
+endif()

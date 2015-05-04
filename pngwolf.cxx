@@ -21,34 +21,34 @@
 //
 ////////////////////////////////////////////////////////////////////
 
-#ifdef _MSC_VER
+#include <float.h>
+#include <limits.h>
+#include <math.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#include <algorithm>
+#include <bitset>
+#include <functional>
+#include <iomanip>
+#include <iostream>
+#include <list>
+#include <map>
+#include <numeric>
+#include <vector>
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #include <WinSock2.h>
-#pragma comment(lib, "ws2_32.lib")
 #else
 #include <arpa/inet.h>
 #endif
 
-#include "zopfli/src/zopfli/zopfli.h"
-
-#include <signal.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <ga/ga.h>
-#include <iostream>
-#include <list>
-#include <vector>
-#include <stdio.h>
-#include <ctime>
-#include <iomanip>
-#include <functional>
-#include <numeric>
-#include <zlib.h>
-#include <float.h>
-#include <limits.h>
-#include <math.h>
-#include <map>
-#include <bitset>
-#include <algorithm>
+#include "ga/ga.h"
+#include "zlib.h"
+#include "zopfli.h"
 
 #ifndef SIZE_MAX
 #define SIZE_MAX ((size_t)-1)
