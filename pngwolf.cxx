@@ -131,6 +131,7 @@ public:
   bool verbose_analysis;
   bool verbose_summary;
   bool verbose_genomes;
+  bool verbose_zopfli;
   bool exclude_singles;
   bool exclude_original;
   bool exclude_heuristic;
@@ -272,7 +273,7 @@ public:
 
     ZopfliInitOptions(&zopt);
 
-    zopt.verbose = 1;
+    zopt.verbose = zop_verbose;
     zopt.numiterations = zop_iter;
     zopt.blocksplittinglast = zop_splitlast ? 1 : 0;
     zopt.blocksplittingmax = zop_maxsplit;
@@ -290,15 +291,17 @@ public:
     return deflated;
   }
 
-  DeflateZopfli(int iter, int splitlast, int maxsplit) :
+  DeflateZopfli(int iter, int splitlast, int maxsplit, bool verbose) :
     zop_iter(iter),
     zop_splitlast(splitlast),
-    zop_maxsplit(maxsplit) {
+    zop_maxsplit(maxsplit),
+    zop_verbose(verbose) {
   }
 
   int zop_iter;
   bool zop_splitlast;
   int zop_maxsplit;
+  bool zop_verbose;
 };
 
 static const char PNG_MAGIC[] = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
@@ -1606,6 +1609,7 @@ help(void) {
     "  --verbose-analysis             More details in initial image analysis       \n"
     "  --verbose-summary              More details in optimization summary         \n"
     "  --verbose-genomes              More details when improvements are found     \n"
+    "  --verbose-zopfli               More details from Zopfli                     \n"
     "  --verbose                      Shorthand for all verbosity options          \n"
     "  --normalize-alpha              For RGBA, make fully transparent pixels black\n"
     "  --even-if-bigger               Otherwise the original is copied if it's best\n"
@@ -1648,6 +1652,7 @@ main(int argc, char *argv[]) {
   bool argVerboseAnalysis = false;
   bool argVerboseSummary = false;
   bool argVerboseGenomes = false;
+  bool argVerboseZopfli = false;
   bool argExcludeSingles = false;
   bool argExcludeOriginal = false;
   bool argExcludeHeuristic = false;
@@ -1711,6 +1716,10 @@ main(int argc, char *argv[]) {
       argVerboseGenomes = true;
       continue;
 
+    } else if (strcmp("--verbose-zopfli", s) == 0) {
+      argVerboseZopfli = true;
+      continue;
+
     } else if (strcmp("--exclude-original", s) == 0) {
       argExcludeOriginal = true;
       continue;
@@ -1727,6 +1736,7 @@ main(int argc, char *argv[]) {
       argVerboseAnalysis = true;
       argVerboseSummary = true;
       argVerboseGenomes = true;
+      argVerboseZopfli = true;
       continue;
 
     } else if (strcmp("--info", s) == 0) {
@@ -1833,7 +1843,7 @@ main(int argc, char *argv[]) {
   }
 
   DeflateZlib fast(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
-  DeflateZopfli good(argZopfliIter, argZopfliSplitLast, argZopfliMaxSplit);
+  DeflateZopfli good(argZopfliIter, argZopfliSplitLast, argZopfliMaxSplit, argVerboseZopfli);
 
   wolf.zop_iter = argZopfliIter;
   wolf.zop_splitlast = argZopfliSplitLast;
@@ -1850,6 +1860,7 @@ main(int argc, char *argv[]) {
   wolf.verbose_analysis = argVerboseAnalysis;
   wolf.verbose_genomes = argVerboseGenomes;
   wolf.verbose_summary = argVerboseSummary;
+  wolf.verbose_zopfli = argVerboseZopfli;
   wolf.exclude_heuristic = argExcludeHeuristic;
   wolf.exclude_original = argExcludeOriginal;
   wolf.exclude_singles = argExcludeSingles;
