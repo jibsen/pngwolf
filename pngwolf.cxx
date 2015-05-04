@@ -4,7 +4,8 @@
 //
 // Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 //
-// Modified to use zopfli instead of 7-Zip.
+// Modified to use Zopfli for the final compression step
+// Copyright (C) 2015 Joergen Ibsen
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -667,7 +668,7 @@ void PngWolf::log_summary() {
       "best zlib deflated idat size: %0.0f\n"
       "total time spent optimizing:  %0.0f\n"
       "number of genomes evaluated:  %u\n"
-      "size of zopfli deflated data:   %u\n"
+      "size of Zopfli deflated data:   %u\n"
       "size difference to original:  %d\n",
       best_genomes.back()->score(),
       difftime(time(NULL), program_begun_at),
@@ -920,7 +921,7 @@ void PngWolf::init_filters() {
   // individually and picks the filter that compresses the line
   // best. This may be a useful clue for the others, but tests
   // suggests this might interfere in cases where zlib is a poor
-  // estimator, tuning genomes too much for zlib instead of zopfli.
+  // estimator, tuning genomes too much for zlib instead of Zopfli.
   // Generally this should be expected to perform poorly for very
   // small images. In the standard Alexa 1000 sample it performs
   // better than the specification's heuristic in 73% of cases;
@@ -1220,13 +1221,13 @@ void PngWolf::recompress() {
   best_deflated = deflate_good->deflate(best_inflated);
 
   // In my test sample in 1.66% of cases, using a high zlib level,
-  // zlib is able to produce smaller output than zopfli. So for the
+  // zlib is able to produce smaller output than Zopfli. So for the
   // case where users do choose a high setting for zlib, reward
   // them by using zlib instead to recompress. Since zlib is fast,
   // this recompression should not be much of a performance hit.
 
   // TODO: This should be noted in the verbose output, otherwise
-  // this would make zopfli appear better than it is. In the longer
+  // this would make Zopfli appear better than it is. In the longer
   // term perhaps the output should simply say what estimator and
   // what compressor was used and give the respective sizes.
 
@@ -1239,7 +1240,7 @@ void PngWolf::recompress() {
   // is separation of things you'd put into a library and what
   // is really more part of the command line application. Right
   // now run() should really do this, but then you could not
-  // abort zopfli easily. Also not sure what --best-idat-to ought
+  // abort Zopfli easily. Also not sure what --best-idat-to ought
   // to do here. Might end up exposing a step() method and let
   // the command line part do logging and other things.
 
@@ -1425,7 +1426,7 @@ bool PngWolf::read_file() {
     }
   }
 
-  // For very large images the highest zopfli setting requires too
+  // For very large images the highest Zopfli setting requires too
   // much time to be worth the saved bytes, especially as `pngout`
   // performs better for such images, at least if they are highly
   // redundant, anyway, so this option allows picking the highest
@@ -1599,9 +1600,9 @@ help(void) {
     "  --zlib-strategy=<int>          zlib estimator strategy (default: 0)         \n"
     "  --zlib-window=<int>            zlib estimator window bits (default: 15)     \n"
     "  --zlib-memlevel=<int>          zlib estimator memory level (default: 8)     \n"
-    "  --zopfli-iter=<int>            zopfli iterations (default: 15)              \n"
-    "  --zopfli-splitlast             zopfli split blocks after compression        \n"
-    "  --zopfli-maxsplit=<int>        zopfli max blocks to split into (default: 15)\n"
+    "  --zopfli-iter=<int>            Zopfli iterations (default: 15)              \n"
+    "  --zopfli-splitlast             Zopfli split blocks after compression        \n"
+    "  --zopfli-maxsplit=<int>        Zopfli max blocks to split into (default: 15)\n"
     "  --verbose-analysis             More details in initial image analysis       \n"
     "  --verbose-summary              More details in optimization summary         \n"
     "  --verbose-genomes              More details when improvements are found     \n"
@@ -1618,7 +1619,7 @@ help(void) {
     " use a similar approach to find a good arrangement of color palette entries). \n"
     "                                                                              \n"
     " To approximate the quality of a filter combination it compresses IDAT chunks \n"
-    " using `zlib` and ultimately uses the Deflate encoder in `zopfli` to store the\n"
+    " using `zlib` and ultimately uses the Deflate encoder in `Zopfli` to store the\n"
     " output image. It is slow because it recompresses the IDAT data fully for all \n"
     " filter combinations even if only minor changes are made or if two filter com-\n"
     " binations are merged, as `zlib` has no built-in support for caching analysis \n"

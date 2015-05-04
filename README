@@ -26,16 +26,16 @@ That is, in essence, what `pngwolf` does, over and over again. Further,
 the most widely used PNG encoders use the zlib library for compression.
 The zlib library favours speed over compression ratio in some cases, so
 whatever filters are selected to aid compression, the result with zlib
-may not be the smallest possible. The zopfli library has a Deflate en-
+may not be the smallest possible. The Zopfli library has a Deflate en-
 coder that favours size over speed at certain settings. So, `pngwolf`
 attempts to make use of both: a fast zlib setting is used to estimate
 how well some filter combination aids compression, and when it gets
-bored, it uses zopfli to generate the final result.
+bored, it uses Zopfli to generate the final result.
 
 Doing this `pngwolf` is able to compress some images better than other
 optimizers (like `OptiPNG`, `AdvanceCOMP`, `pngcrush`, and `pngout`),
 either because it finds better filter combinations then they do, or be-
-cause it uses zopfli's Deflate implementation. It does not attempt to
+cause it uses Zopfli's Deflate implementation. It does not attempt to
 make other optimizations, like converting indexed images to RGB format.
 
 None of the tools mentioned, including `pngwolf` follow any kind of ho-
@@ -76,7 +76,7 @@ program, results should not get lost, but should be stored anyway.
 To compile `pngwolf` you need three additional libraries:
 
   * GAlib  http://lancet.mit.edu/ga/dist/
-  * zopfli https://github.com/google/zopfli/
+  * Zopfli https://github.com/google/zopfli/
   * zlib   http://zlib.net/
 
 Put these into `galib`, `zopfli`, and `zlib` sub-directories into the
@@ -85,4 +85,5 @@ utility (http://www.cmake.org/) on the `CMakeLists.txt`, or simply
 specify all the files specified in `CMakeLists.txt` as input to your
 compiler.
 
-Note: This version was modified to replace 7-Zip with zopfli.
+Note: This version was modified to use Zopfli for the final compression
+step.
