@@ -533,7 +533,7 @@ void filter_idat(unsigned char* src, unsigned char* dst, const PngFilterGenome& 
 ////////////////////////////////////////////////////////////////////
 // Signal handlers
 ////////////////////////////////////////////////////////////////////
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 BOOL WINAPI console_event_handler(DWORD Event) {
   switch (Event) {
   case CTRL_C_EVENT:
@@ -1684,7 +1684,7 @@ main(int argc, char *argv[]) {
 
   bool argOkay = true;;
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
   sig_t old_handler;
 #endif
 
@@ -1900,7 +1900,7 @@ main(int argc, char *argv[]) {
 
   wolf.search_begun_at = time(NULL);
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
   SetConsoleCtrlHandler(console_event_handler, TRUE);
 #else
   old_handler = signal(SIGINT, sigint_handler);
@@ -1914,7 +1914,7 @@ main(int argc, char *argv[]) {
   // not much to avoid that, other than setting a timer with
   // some grace perdiod which strikes me as too complicated.
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
   SetConsoleCtrlHandler(console_event_handler, FALSE);
 #else
   signal(SIGINT, old_handler);
