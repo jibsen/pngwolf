@@ -1631,6 +1631,9 @@ help(void) {
     " Uses http://zlib.net/ and http://lancet.mit.edu/ga/ and                      \n"
     " https://github.com/google/zopfli/                                            \n"
     " -----------------------------------------------------------------------------\n"
+    " Note: This version was modified to use Zopfli for the final compression step,\n"
+    "       https://github.com/jibsen/pngwolf/                                     \n"
+    " -----------------------------------------------------------------------------\n"
     " http://bjoern.hoehrmann.de/pngwolf/ (c) 2008-2011 http://bjoern.hoehrmann.de/\n"
     "");
 }
