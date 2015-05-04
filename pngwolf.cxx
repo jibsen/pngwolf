@@ -291,7 +291,7 @@ public:
     return deflated;
   }
 
-  DeflateZopfli(int iter, int splitlast, int maxsplit, bool verbose) :
+  DeflateZopfli(int iter, bool splitlast, int maxsplit, bool verbose) :
     zop_iter(iter),
     zop_splitlast(splitlast),
     zop_maxsplit(maxsplit),
