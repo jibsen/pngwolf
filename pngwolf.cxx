@@ -1674,7 +1674,7 @@ main(int argc, char *argv[]) {
   int argZlibMemlevel = 8;
   int argZlibWindow = 15;
   int argZopfliIter = 15;
-  int argZopfliSplitLast = false;
+  bool argZopfliSplitLast = false;
   int argZopfliMaxSplit = 15;
 
   bool argOkay = true;;
