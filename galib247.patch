@@ -1,0 +1,126 @@
+diff -Nurp galib/ga/GA1DArrayGenome.C galib/ga/GA1DArrayGenome.C
+--- galib/ga/GA1DArrayGenome.C	2007-03-07 14:16:43.000000000 +0100
++++ galib/ga/GA1DArrayGenome.C	2015-05-06 09:55:09.901083041 +0200
+@@ -50,7 +50,7 @@ GAGenome(DEFAULT_1DARRAY_INITIALIZER,
+   evaluator(f);
+   userData(u);
+   nx=minX=maxX=length;
+-  crossover(DEFAULT_1DARRAY_CROSSOVER);
++  this->crossover(DEFAULT_1DARRAY_CROSSOVER);
+ }
+ 
+ 
+@@ -222,10 +222,10 @@ GA1DArrayGenome<T>(length, f, u){
+   aset = new GAAlleleSet<T>[1];
+   aset[0] = s;
+ 
+-  initializer(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_INITIALIZER);
+-  mutator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_MUTATOR);
+-  comparator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_COMPARATOR);
+-  crossover(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_CROSSOVER);
++  this->initializer(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_INITIALIZER);
++  this->mutator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_MUTATOR);
++  this->comparator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_COMPARATOR);
++  this->crossover(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_CROSSOVER);
+ }
+ 
+ template <class T> 
+@@ -238,10 +238,10 @@ GA1DArrayGenome<T>(sa.size(), f, u) {
+   for(int i=0; i<naset; i++)
+     aset[i] = sa.set(i);
+ 
+-  initializer(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_INITIALIZER);
+-  mutator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_MUTATOR);
+-  comparator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_COMPARATOR);
+-  crossover(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_CROSSOVER);
++  this->initializer(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_INITIALIZER);
++  this->mutator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_MUTATOR);
++  this->comparator(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_COMPARATOR);
++  this->crossover(GA1DArrayAlleleGenome<T>::DEFAULT_1DARRAY_ALLELE_CROSSOVER);
+ }
+ 
+ 
+diff -Nurp galib/ga/GA2DArrayGenome.C galib/ga/GA2DArrayGenome.C
+--- galib/ga/GA2DArrayGenome.C	2007-03-07 14:16:43.000000000 +0100
++++ galib/ga/GA2DArrayGenome.C	2015-05-06 09:55:09.901083041 +0200
+@@ -39,7 +39,7 @@ GAGenome(DEFAULT_2DARRAY_INITIALIZER,
+ {
+   evaluator(f);
+   userData(u);
+-  crossover(DEFAULT_2DARRAY_CROSSOVER);
++  this->crossover(DEFAULT_2DARRAY_CROSSOVER);
+   nx=minX=maxX=width; ny=minY=maxY=height;
+ }
+ 
+@@ -269,10 +269,10 @@ GA2DArrayGenome<T>(width,height,f,u){
+   aset = new GAAlleleSet<T>[1];
+   aset[0] = s;
+ 
+-  initializer(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_INITIALIZER);
+-  mutator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_MUTATOR);
+-  comparator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_COMPARATOR);
+-  crossover(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_CROSSOVER);
++  this->initializer(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_INITIALIZER);
++  this->mutator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_MUTATOR);
++  this->comparator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_COMPARATOR);
++  this->crossover(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_CROSSOVER);
+ }
+ 
+ template <class T> 
+@@ -286,10 +286,10 @@ GA2DArrayGenome<T>(width,height, f, u) {
+   for(int i=0; i<naset; i++)
+     aset[i] = sa.set(i);
+ 
+-  initializer(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_INITIALIZER);
+-  mutator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_MUTATOR);
+-  comparator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_COMPARATOR);
+-  crossover(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_CROSSOVER);
++  this->initializer(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_INITIALIZER);
++  this->mutator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_MUTATOR);
++  this->comparator(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_COMPARATOR);
++  this->crossover(GA2DArrayAlleleGenome<T>::DEFAULT_2DARRAY_ALLELE_CROSSOVER);
+ }
+ 
+ 
+diff -Nurp galib/ga/GA3DArrayGenome.C galib/ga/GA3DArrayGenome.C
+--- galib/ga/GA3DArrayGenome.C	2007-03-07 14:16:43.000000000 +0100
++++ galib/ga/GA3DArrayGenome.C	2015-05-06 09:55:09.905083041 +0200
+@@ -39,7 +39,7 @@ GAGenome(DEFAULT_3DARRAY_INITIALIZER,
+ {
+   evaluator(f);
+   userData(u);
+-  crossover(DEFAULT_3DARRAY_CROSSOVER);
++  this->crossover(DEFAULT_3DARRAY_CROSSOVER);
+   nx=minX=maxX=w; ny=minY=maxY=h; nz=minZ=maxZ=d;
+ }
+ 
+@@ -322,10 +322,10 @@ GA3DArrayGenome<T>(w,h,d,f,u) {
+   aset = new GAAlleleSet<T>[1];
+   aset[0] = s;
+ 
+-  initializer(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_INITIALIZER);
+-  mutator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_MUTATOR);
+-  comparator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_COMPARATOR);
+-  crossover(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_CROSSOVER);
++  this->initializer(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_INITIALIZER);
++  this->mutator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_MUTATOR);
++  this->comparator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_COMPARATOR);
++  this->crossover(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_CROSSOVER);
+ }
+ 
+ template <class T> 
+@@ -339,10 +339,10 @@ GA3DArrayGenome<T>(w,h,d, f, u) {
+   for(int i=0; i<naset; i++)
+     aset[i] = sa.set(i);
+ 
+-  initializer(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_INITIALIZER);
+-  mutator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_MUTATOR);
+-  comparator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_COMPARATOR);
+-  crossover(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_CROSSOVER);
++  this->initializer(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_INITIALIZER);
++  this->mutator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_MUTATOR);
++  this->comparator(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_COMPARATOR);
++  this->crossover(GA3DArrayAlleleGenome<T>::DEFAULT_3DARRAY_ALLELE_CROSSOVER);
+ }
+ 
+ 

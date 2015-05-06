@@ -85,5 +85,8 @@ utility (http://www.cmake.org/) on the `CMakeLists.txt`, or simply
 specify all the files specified in `CMakeLists.txt` as input to your
 compiler.
 
+Note: `galib247.patch` fixes an issue in GAlib 2.4.7 when compiling
+with GCC and Clang.
+
 Note: This version was modified to use Zopfli for the final compression
 step.
