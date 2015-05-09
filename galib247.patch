@@ -124,3 +124,15 @@ diff -Nurp galib/ga/GA3DArrayGenome.C galib/ga/GA3DArrayGenome.C
  }
  
  
+diff -Nurp galib/ga/gaerror.C galib/ga/gaerror.C
+--- galib/ga/gaerror.C	2007-03-07 14:16:43.000000000 +0100
++++ galib/ga/gaerror.C	2015-05-09 11:54:06.650444579 +0200
+@@ -21,7 +21,7 @@ char _gaerrbuf2[120];
+ static STD_OSTREAM *__gaErrStream = & STD_CERR;
+ #endif
+ static GABoolean __gaErrFlag = gaTrue;
+-static char *__gaErrStr[] = {
++static const char *__gaErrStr[] = {
+   "error reading from file: ",
+   "error writing to file: ",
+   "unexpected EOF encountered during read.",
