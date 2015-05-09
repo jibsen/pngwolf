@@ -305,8 +305,8 @@ public:
 };
 
 static const char PNG_MAGIC[] = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
-static const uint32_t IDAT_TYPE = 0x49444154;
 static const uint32_t IHDR_TYPE = 0x49484452;
+static const uint32_t IDAT_TYPE = 0x49444154;
 static const uint32_t IEND_TYPE = 0x49454e44;
 
 ////////////////////////////////////////////////////////////////////
@@ -1702,10 +1702,6 @@ main(int argc, char *argv[]) {
       argHelp = 1;
       break;
 
-    } else if (strcmp("--zopfli-splitlast", s) == 0) {
-      argZopfliSplitLast = true;
-      continue;
-
     } else if (strcmp("--verbose-analysis", s) == 0) {
       argVerboseAnalysis = true;
       continue;
@@ -1763,6 +1759,10 @@ main(int argc, char *argv[]) {
       argExcludeExperiment2 = true;
       argExcludeExperiment3 = true;
       argExcludeExperiment4 = true;
+      continue;
+
+    } else if (strcmp("--zopfli-splitlast", s) == 0) {
+      argZopfliSplitLast = true;
       continue;
 
     }
@@ -1847,9 +1847,6 @@ main(int argc, char *argv[]) {
   DeflateZlib fast(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
   DeflateZopfli good(argZopfliIter, argZopfliSplitLast, argZopfliMaxSplit, argVerboseZopfli);
 
-  wolf.zop_iter = argZopfliIter;
-  wolf.zop_splitlast = argZopfliSplitLast;
-  wolf.zop_maxsplit = argZopfliMaxSplit;
   wolf.zlib_level = argZlibLevel;
   wolf.zlib_memLevel = argZlibMemlevel;
   wolf.zlib_strategy = argZlibStrategy;
@@ -1881,6 +1878,9 @@ main(int argc, char *argv[]) {
   wolf.even_if_bigger = argEvenIfBigger;
   wolf.auto_mpass = argAutoMpass;
   wolf.bigger_is_better = argBiggerIsBetter;
+  wolf.zop_iter = argZopfliIter;
+  wolf.zop_splitlast = argZopfliSplitLast;
+  wolf.zop_maxsplit = argZopfliMaxSplit;
 
   // TODO: ...
   try {
