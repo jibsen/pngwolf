@@ -150,6 +150,9 @@ public:
   int zop_iter;
   bool zop_splitlast;
   int zop_maxsplit;
+  std::vector<uint32_t> strip_chunks;
+  bool strip_optional;
+  std::vector<uint32_t> keep_chunks;
 
   //
   Deflater* deflate_fast;
@@ -306,6 +309,8 @@ public:
 
 static const char PNG_MAGIC[] = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
 static const uint32_t IHDR_TYPE = 0x49484452;
+static const uint32_t PLTE_TYPE = 0x504c5445;
+static const uint32_t tRNS_TYPE = 0x74524e53;
 static const uint32_t IDAT_TYPE = 0x49444154;
 static const uint32_t IEND_TYPE = 0x49454e44;
 
@@ -1509,13 +1514,45 @@ bool PngWolf::save_file() {
 
   std::list<PngChunk> new_chunks;
   std::list<PngChunk>::iterator i;
+  std::vector<uint32_t>::iterator j;
 
   for (i = chunks.begin(); i != chunks.end(); ++i) {
     if (i->type == IDAT_TYPE)
       continue;
 
     if (i->type != IEND_TYPE) {
-      new_chunks.push_back(*i);
+      if (i->type == IHDR_TYPE) {
+        new_chunks.push_back(*i);
+        continue;
+      }
+
+      if (i->type == PLTE_TYPE && ihdr.color == 3) {
+        new_chunks.push_back(*i);
+        continue;
+      }
+
+      j = find(strip_chunks.begin(), strip_chunks.end(), i->type);
+
+      if (j != strip_chunks.end()) {
+        continue;
+      }
+
+      if (!strip_optional) {
+        new_chunks.push_back(*i);
+        continue;
+      }
+
+      if (i->type == tRNS_TYPE) {
+        new_chunks.push_back(*i);
+        continue;
+      }
+
+      j = find(keep_chunks.begin(), keep_chunks.end(), i->type);
+
+      if (j != keep_chunks.end()) {
+        new_chunks.push_back(*i);
+      }
+
       continue;
     }
 
@@ -1614,6 +1651,9 @@ help(void) {
     "  --verbose-zopfli               More details from Zopfli                     \n"
     "  --verbose                      Shorthand for all verbosity options          \n"
     "  --normalize-alpha              For RGBA, make fully transparent pixels black\n"
+    "  --strip-chunk=<name>           Strip chunks matching name (4 chars)         \n"
+    "  --strip-optional               Strip all optional chunks except tRNS        \n"
+    "  --keep-chunk=<name>            Keep chunks matching name (4 chars)          \n"
     "  --even-if-bigger               Otherwise the original is copied if it's best\n"
     "  --bigger-is-better             Find filter sequences that compress worse    \n"
     "  --info                         Just print out verbose analysis and exit     \n"
@@ -1683,6 +1723,9 @@ main(int argc, char *argv[]) {
   int argZopfliIter = 15;
   bool argZopfliSplitLast = false;
   int argZopfliMaxSplit = 15;
+  std::vector<uint32_t> argStripChunks;
+  bool argStripOptional = false;
+  std::vector<uint32_t> argKeepChunks;
 
   bool argOkay = true;;
 
@@ -1765,6 +1808,10 @@ main(int argc, char *argv[]) {
       argZopfliSplitLast = true;
       continue;
 
+    } else if (strcmp("--strip-optional", s) == 0) {
+      argStripOptional = true;
+      continue;
+
     }
 
     value = strchr(s, '=');
@@ -1833,6 +1880,20 @@ main(int argc, char *argv[]) {
     } else if (strncmp("--zopfli-maxsplit", s, nlen) == 0) {
       argZopfliMaxSplit = atoi(value);
 
+    } else if (strncmp("--strip-chunk", s, nlen) == 0) {
+      if (strlen(value) == 4) {
+        argStripChunks.push_back(ntohl(*(uint32_t *)value));
+      } else {
+        argOkay = 0;
+      }
+
+    } else if (strncmp("--keep-chunk", s, nlen) == 0) {
+      if (strlen(value) == 4) {
+        argKeepChunks.push_back(ntohl(*(uint32_t *)value));
+      } else {
+        argOkay = 0;
+      }
+
     } else {
       // TODO: error
       argHelp = 1;
@@ -1881,6 +1942,9 @@ main(int argc, char *argv[]) {
   wolf.zop_iter = argZopfliIter;
   wolf.zop_splitlast = argZopfliSplitLast;
   wolf.zop_maxsplit = argZopfliMaxSplit;
+  wolf.strip_chunks = argStripChunks;
+  wolf.strip_optional = argStripOptional;
+  wolf.keep_chunks = argKeepChunks;
 
   // TODO: ...
   try {
