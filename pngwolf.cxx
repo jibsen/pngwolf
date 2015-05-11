@@ -653,6 +653,20 @@ unsigned sum_abs(unsigned c1, unsigned char c2) {
   return c1 + (c2 < 128 ? c2 : 256 - c2);
 }
 
+void update_chunk_crc(PngChunk &chunk) {
+    const uint32_t chunk_type_network = htonl(chunk.type);
+
+    chunk.crc32 = crc32(0L, Z_NULL, 0);
+
+    chunk.crc32 = crc32(chunk.crc32,
+      (const Bytef*)&chunk_type_network,
+      sizeof(chunk_type_network));
+
+    chunk.crc32 = crc32(chunk.crc32,
+      (const Bytef*)&chunk.data[0],
+      chunk.data.size());
+}
+
 ////////////////////////////////////////////////////////////////////
 // Logging
 ////////////////////////////////////////////////////////////////////
@@ -1561,16 +1575,7 @@ bool PngWolf::save_file() {
     new_idat.data = best_deflated;
     new_idat.size = new_idat.data.size();
 
-    uint32_t idat_type_network = htonl(new_idat.type);
-
-    new_idat.crc32 = crc32(0L, Z_NULL, 0);
-    new_idat.crc32 = crc32(new_idat.crc32,
-      (const Bytef*)&idat_type_network,
-      sizeof(idat_type_network));
-
-    new_idat.crc32 = crc32(new_idat.crc32,
-      (const Bytef*)&new_idat.data[0],
-      new_idat.data.size());
+    update_chunk_crc(new_idat);
 
     new_chunks.push_back(new_idat);
     new_chunks.push_back(*i);
