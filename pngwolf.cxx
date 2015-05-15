@@ -209,12 +209,12 @@ public:
 
   // Constructor
   PngWolf() :
-    should_abort(false),
-    nth_generation(0),
-    genomes_evaluated(0),
-    done_deflating_at(0),
     deflate_fast(NULL),
-    deflate_good(NULL)
+    deflate_good(NULL),
+    should_abort(false),
+    done_deflating_at(0),
+    nth_generation(0),
+    genomes_evaluated(0)
   {}
 
   ~PngWolf() {
@@ -762,8 +762,8 @@ void PngWolf::log_analysis() {
 
     // TODO: htonl is probably not right here
     for (it = invis_colors.begin(); it != invis_colors.end(); ++it) {
-      fprintf(stdout, "  - %08X # %u times\n", htonl(it->first),
-        (unsigned int) it->second);
+      fprintf(stdout, "  - %08X # %u times\n",
+        (unsigned int) htonl(it->first), (unsigned int) it->second);
       total += it->second;
     }
 
@@ -855,7 +855,7 @@ void PngWolf::log_critter(PngFilterGenome* curr_best) {
 
   log_genome(curr_best);
   fflush(stdout);
-};
+}
 
 void PngWolf::init_filters() {
 
