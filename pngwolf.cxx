@@ -206,6 +206,7 @@ public:
   void run();
   void recompress();
   std::vector<char> refilter(const PngFilterGenome& ge);
+  bool recompress_optional_chunk(PngChunk &chunk);
 
   // Constructor
   PngWolf() :
@@ -1533,6 +1534,50 @@ bool PngWolf::save_idat(const char* path, std::vector<char>& deflated, std::vect
   return false;
 }
 
+bool PngWolf::recompress_optional_chunk(PngChunk &chunk) {
+  if (chunk.type == iCCP_TYPE) {
+    std::vector<char>::iterator i;
+
+    // Find null seperator at end of profile name
+    i = find(chunk.data.begin(), chunk.data.end(), 0);
+
+    if (chunk.data.end() - i < 3) {
+      return true;
+    }
+
+    ++i;
+
+    // Check compression method is 0
+    if (*i != 0) {
+      return true;
+    }
+
+    ++i;
+
+    std::vector<char> original_deflated(i, chunk.data.end());
+
+    std::vector<char> inflated_data(inflate_zlib(original_deflated));
+
+    std::vector<char> deflated_data(deflate_good->deflate(inflated_data));
+
+    if (deflated_data.size() < original_deflated.size()) {
+      chunk.data.erase(i, chunk.data.end());
+      chunk.data.insert(chunk.data.end(),
+        deflated_data.begin(), deflated_data.end());
+      chunk.size = chunk.data.size();
+
+      update_chunk_crc(chunk);
+
+      printf("# iCCP %u bytes smaller\n",
+        (unsigned int) (original_deflated.size() - deflated_data.size()));
+
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool PngWolf::save_file() {
 
   // Create new list of chunks with old IDATs removed, and when
@@ -1565,6 +1610,7 @@ bool PngWolf::save_file() {
       }
 
       if (!strip_optional) {
+        recompress_optional_chunk(*i);
         new_chunks.push_back(*i);
         continue;
       }
@@ -1577,6 +1623,7 @@ bool PngWolf::save_file() {
       j = find(keep_chunks.begin(), keep_chunks.end(), i->type);
 
       if (j != keep_chunks.end()) {
+        recompress_optional_chunk(*i);
         new_chunks.push_back(*i);
       }
 
