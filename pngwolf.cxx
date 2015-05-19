@@ -233,7 +233,7 @@ public:
       abort();
     }
 
-    strm.next_in = (Bytef*)&inflated[0];
+    strm.next_in = (z_const Bytef*)&inflated[0];
     strm.avail_in = inflated.size();
 
     size_t max = deflateBound(&strm, inflated.size());
@@ -570,7 +570,7 @@ std::vector<char> inflate_zlib(std::vector<char>& deflated) {
   strm.zalloc = Z_NULL;
   strm.zfree = Z_NULL;
   strm.opaque = Z_NULL;
-  strm.next_in = (Bytef*)&deflated[0];
+  strm.next_in = (z_const Bytef*)&deflated[0];
   strm.avail_in = deflated.size();
   std::vector<char> inflated;
   std::vector<char> temp(65535);
@@ -1051,7 +1051,7 @@ void PngWolf::init_filters() {
       if (deflateCopy(&here, &strm) != Z_OK) {
       }
 
-      here.next_in = (Bytef*)&flt_singles[fi->first][pos];
+      here.next_in = (z_const Bytef*)&flt_singles[fi->first][pos];
       here.avail_in = scanline_width;
 
       int status = deflate(&here, Z_FINISH);
@@ -1070,7 +1070,7 @@ void PngWolf::init_filters() {
     }
 
     genomes["incremental"]->gene(row, (PngFilter)best_flt);
-    strm.next_in = (Bytef*)&flt_singles[(PngFilter)best_flt][pos];
+    strm.next_in = (z_const Bytef*)&flt_singles[(PngFilter)best_flt][pos];
     strm.avail_in = scanline_width;
 
     if (deflate(&strm, Z_NO_FLUSH) != Z_OK) {
@@ -1505,7 +1505,7 @@ bool PngWolf::save_idat(const char* path, std::vector<char>& deflated, std::vect
   // TODO: endianess?
 
   uint32_t crc = crc32(0L, Z_NULL, 0);
-  crc = crc32(crc, (Bytef*)&inflated[0], inflated.size());
+  crc = crc32(crc, (const Bytef*)&inflated[0], inflated.size());
 
   if (fwrite(&crc, sizeof(crc), 1, out) != 1) {
   }
