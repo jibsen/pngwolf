@@ -709,9 +709,9 @@ void PngWolf::log_summary() {
   }
 
   if (diff >= 0)
-    fprintf(stdout, "# %u bytes smaller\n", diff);
+    fprintf(stdout, "# IDAT %u bytes smaller\n", diff);
   else
-    fprintf(stdout, "# %u bytes bigger\n", abs(diff));
+    fprintf(stdout, "# IDAT %u bytes bigger\n", abs(diff));
 
   fflush(stdout);
 }
