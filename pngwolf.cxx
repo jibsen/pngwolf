@@ -319,6 +319,10 @@ static const uint32_t PLTE_TYPE = 0x504c5445;
 static const uint32_t tRNS_TYPE = 0x74524e53;
 static const uint32_t IDAT_TYPE = 0x49444154;
 static const uint32_t IEND_TYPE = 0x49454e44;
+static const uint32_t tEXt_TYPE = 0x74455874;
+static const uint32_t iTXt_TYPE = 0x69545874;
+static const uint32_t zTXt_TYPE = 0x7a545874;
+static const uint32_t iCCP_TYPE = 0x69434350;
 
 ////////////////////////////////////////////////////////////////////
 // Global PngWolf instance
