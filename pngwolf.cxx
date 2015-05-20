@@ -227,10 +227,16 @@ public:
 struct DeflateZlib : public Deflater {
 public:
   std::vector<char> deflate(const std::vector<char>& inflated) {
+    z_stream strm;
 
-    if (deflateReset(&strm) != Z_OK) {
-      // TODO: ...
-      abort();
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
+
+    if (deflateInit2(&strm, z_level, Z_DEFLATED,
+      z_windowBits, z_memLevel, z_strategy) != Z_OK) {
+        // TODO:
+        abort();
     }
 
     strm.next_in = (z_const Bytef*)&inflated[0];
@@ -248,22 +254,22 @@ public:
 
     new_deflated.resize(max - strm.avail_out);
 
+    deflateEnd(&strm);
+
     return new_deflated;
   }
 
-  DeflateZlib(int level, int windowBits, int memLevel, int strategy) {
-    strm.zalloc = Z_NULL;
-    strm.zfree = Z_NULL;
-    strm.opaque = Z_NULL;
-
-    if (deflateInit2(&strm, level, Z_DEFLATED,
-      windowBits, memLevel, strategy) != Z_OK) {
-        // TODO:
-        abort();
-    }
+  DeflateZlib(int level, int windowBits, int memLevel, int strategy) :
+    z_level(level),
+    z_windowBits(windowBits),
+    z_memLevel(memLevel),
+    z_strategy(strategy) {
   }
 
-  z_stream strm;
+  int z_level;
+  int z_windowBits;
+  int z_memLevel;
+  int z_strategy;
 };
 
 struct DeflateZopfli : public Deflater {
