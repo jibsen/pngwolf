@@ -630,6 +630,9 @@ float Evaluator(GAGenome& genome) {
   if (wolf.should_abort)
     return FLT_MAX;
 
+#ifdef _OPENMP
+  #pragma omp atomic
+#endif
   wolf.genomes_evaluated++;
 
   if (wolf.flt_singles.begin() == wolf.flt_singles.end()) {

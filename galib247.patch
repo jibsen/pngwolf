@@ -136,3 +136,25 @@ diff -Nurp galib/ga/gaerror.C galib/ga/gaerror.C
    "error reading from file: ",
    "error writing to file: ",
    "unexpected EOF encountered during read.",
+diff -Nurp galib/ga/GAIncGA.C galib/ga/GAIncGA.C
+--- galib/ga/GAIncGA.C	2007-03-07 14:16:43.000000000 +0100
++++ galib/ga/GAIncGA.C	2015-05-20 15:24:33.689011205 +0200
+@@ -237,7 +237,17 @@ GAIncrementalGA::step()
+ 
+     stats.numeval += c1 + c2;
+ 
+-    if(rs == PARENT){
++ #ifdef _OPENMP
++    #pragma omp parallel sections
++    {
++      #pragma omp section
++      child1->evaluate();
++      #pragma omp section
++      child2->evaluate();
++    }
++#endif
++
++   if(rs == PARENT){
+       child1 = pop->replace(child1, mom);
+       if(mom == dad)		// this is a possibility, if so do worst
+ 	child2 = pop->replace(child2, GAPopulation::WORST);
