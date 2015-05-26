@@ -63,15 +63,14 @@
 ////////////////////////////////////////////////////////////////////
 // Miscellaneous structures and types
 ////////////////////////////////////////////////////////////////////
-typedef enum {
+enum PngFilter {
   None  = 0,
   Sub   = 1,
   Up    = 2,
   Avg   = 3,
   Paeth = 4
-} PngFilter;
+};
 
-typedef struct PngChunk PngChunk;
 struct PngChunk {
   uint32_t size;
   uint32_t type;
@@ -79,7 +78,6 @@ struct PngChunk {
   std::vector<char> data;
 };
 
-typedef struct IhdrChunk IhdrChunk;
 struct IhdrChunk {
   uint32_t width;
   uint32_t height;
