@@ -1683,7 +1683,7 @@ bool PngWolf::save_file() {
 ////////////////////////////////////////////////////////////////////
 // Help!
 ////////////////////////////////////////////////////////////////////
-void help(void) {
+void show_help(void) {
   fprintf(stdout, "%s",
     " -----------------------------------------------------------------------------\n"
     " Usage: pngwolf --in=file.png --out=file.png                                  \n"
@@ -1963,7 +1963,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (argHelp || argPng == NULL || !argOkay) {
-    help();
+    show_help();
     return EXIT_SUCCESS;
   }
 
