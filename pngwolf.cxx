@@ -213,14 +213,13 @@ public:
     should_abort(false),
     done_deflating_at(0),
     nth_generation(0),
-    genomes_evaluated(0)
-  {}
+    genomes_evaluated(0) {
+  }
 
   ~PngWolf() {
     // TODO: This should probably delete the genomes, both
     // the ge_ ones and the ones in the best_genomes vector
   }
-
 };
 
 struct DeflateZlib : public Deflater {
@@ -1682,8 +1681,7 @@ bool PngWolf::save_file() {
 ////////////////////////////////////////////////////////////////////
 // Help!
 ////////////////////////////////////////////////////////////////////
-void
-help(void) {
+void help(void) {
   fprintf(stdout, "%s",
     " -----------------------------------------------------------------------------\n"
     " Usage: pngwolf --in=file.png --out=file.png                                  \n"
@@ -1750,8 +1748,7 @@ help(void) {
 ////////////////////////////////////////////////////////////////////
 // main
 ////////////////////////////////////////////////////////////////////
-int
-main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
   bool argHelp = false;
   bool argVerboseAnalysis = false;
