@@ -264,6 +264,7 @@ public:
     z_strategy(strategy) {
   }
 
+private:
   int z_level;
   int z_windowBits;
   int z_memLevel;
@@ -305,6 +306,7 @@ public:
     zop_verbose(verbose) {
   }
 
+private:
   int zop_iter;
   bool zop_splitlast;
   int zop_maxsplit;
