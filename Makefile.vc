@@ -1,0 +1,62 @@
+##
+## pngwolf-zopfli
+##
+## Visual C++ Makefile
+##
+
+.SUFFIXES:
+.SUFFIXES: .obj .cxx .C .c
+
+CFLAGS = /W2 /O2 /fp:fast /GL /openmp /DZLIB_CONST
+CXXFLAGS = $(CFLAGS) /TP /EHsc
+LDFLAGS = /release
+LDLIBS = ws2_32.lib
+
+!IF "$(PLATFORM)"=="X64" || "$(PLATFORM)"=="x64"
+LDFLAGS = $(LDFLAGS) /opt:ref,icf /subsystem:console,5.02
+!ELSEIF "$(PLATFORM)"=="X86" || "$(PLATFORM)"=="x86"
+LDFLAGS = $(LDFLAGS) /opt:ref /subsystem:console,5.01
+!ENDIF
+
+objs_pngwolf = pngwolf.obj
+
+objs_galib = galib\ga\GA1DArrayGenome.obj galib\ga\GAAllele.obj \
+  galib\ga\GABaseGA.obj galib\ga\gabincvt.obj galib\ga\GAGenome.obj \
+  galib\ga\GAIncGA.obj galib\ga\GAParameter.obj galib\ga\GAPopulation.obj \
+  galib\ga\garandom.obj galib\ga\gaerror.obj galib\ga\GAScaling.obj \
+  galib\ga\GASelector.obj galib\ga\GAStatistics.obj
+
+objs_zlib = zlib\adler32.obj zlib\crc32.obj zlib\deflate.obj zlib\compress.obj \
+  zlib\infback.obj zlib\inffast.obj zlib\inflate.obj zlib\inftrees.obj zlib\trees.obj \
+  zlib\uncompr.obj zlib\zutil.obj
+
+objs_zopfli = zopfli\src\zopfli\blocksplitter.obj zopfli\src\zopfli\cache.obj \
+  zopfli\src\zopfli\deflate.obj zopfli\src\zopfli\gzip_container.obj \
+  zopfli\src\zopfli\hash.obj zopfli\src\zopfli\katajainen.obj \
+  zopfli\src\zopfli\lz77.obj zopfli\src\zopfli\squeeze.obj \
+  zopfli\src\zopfli\tree.obj zopfli\src\zopfli\util.obj \
+  zopfli\src\zopfli\zlib_container.obj zopfli\src\zopfli\zopfli_lib.obj
+
+objs = $(objs_pngwolf) $(objs_galib) $(objs_zlib) $(objs_zopfli)
+
+target = pngwolf.exe
+
+all: $(target)
+
+.cxx.obj:
+	$(CXX) $(CXXFLAGS) /Igalib /Izlib /Izopfli\src\zopfli /Fo$@ /c $<
+
+{galib\ga}.C{galib\ga}.obj::
+	$(CXX) /MP $(CXXFLAGS) /Igalib /Fogalib\ga\ /c $<
+
+{zlib}.c{zlib}.obj::
+	$(CC) /MP $(CFLAGS) /Izlib /Fozlib\ /c $<
+
+{zopfli\src\zopfli}.c{zopfli\src\zopfli}.obj::
+	$(CC) /MP $(CFLAGS) /Izopfli\src\zopfli /Fozopfli\src\zopfli\ /c $<
+
+$(target): $(objs)
+	$(CC) $(CFLAGS) /Fe$@ $** /link $(LDFLAGS) $(LDLIBS)
+
+clean:
+	del /Q $(objs) $(target)
