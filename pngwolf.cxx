@@ -60,6 +60,8 @@
 #pragma warning(disable: 4100)
 #endif
 
+#define PNGWOLF_VERSION "1.0.0"
+
 ////////////////////////////////////////////////////////////////////
 // Miscellaneous structures and types
 ////////////////////////////////////////////////////////////////////
@@ -1720,6 +1722,7 @@ void show_help(void) {
     "  --even-if-bigger               Otherwise the original is copied if it's best\n"
     "  --bigger-is-better             Find filter sequences that compress worse    \n"
     "  --info                         Just print out verbose analysis and exit     \n"
+    "  --version                      Print version number and exit                \n"
     "  --help                         Print this help page and exit                \n"
     " -----------------------------------------------------------------------------\n"
     " To reduce the file size of PNG images `pngwolf` uses a genetic algorithm for \n"
@@ -1744,6 +1747,20 @@ void show_help(void) {
     "       https://github.com/jibsen/pngwolf/                                     \n"
     " -----------------------------------------------------------------------------\n"
     " http://bjoern.hoehrmann.de/pngwolf/ (c) 2008-2011 http://bjoern.hoehrmann.de/\n"
+    "");
+}
+
+void show_version(void) {
+  fprintf(stdout, "%s",
+    "pngwolf-zopfli " PNGWOLF_VERSION "\n"
+    "\n"
+    "Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>\n"
+    "\n"
+    "Modified to use Zopfli for the final compression step\n"
+    "Copyright (C) 2015 Joergen Ibsen\n"
+    "\n"
+    "This is free software; see the source for copying conditions.\n"
+    "There is NO WARRANTY, to the extent permitted by law.\n"
     "");
 }
 
@@ -1788,6 +1805,7 @@ int main(int argc, char *argv[]) {
   std::vector<uint32_t> argStripChunks;
   bool argStripOptional = false;
   std::vector<uint32_t> argKeepChunks;
+  bool argVersion = false;
 
   bool argOkay = true;;
 
@@ -1873,6 +1891,10 @@ int main(int argc, char *argv[]) {
     } else if (strcmp("--strip-optional", s) == 0) {
       argStripOptional = true;
       continue;
+
+    } else if (strcmp("--version", s) == 0) {
+      argVersion = true;
+      break;
 
     }
 
@@ -1960,6 +1982,11 @@ int main(int argc, char *argv[]) {
       // TODO: error
       argHelp = 1;
     }
+  }
+
+  if (argVersion) {
+    show_version();
+    return EXIT_SUCCESS;
   }
 
   if (argHelp || argPng == NULL || !argOkay) {
