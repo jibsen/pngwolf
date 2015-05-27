@@ -1,3 +1,10 @@
+
+pngwolf-zopfli
+==============
+
+`pngwolf-zopfli` is a version of `pngwolf` that uses Zopfli for the
+final compression step.
+
 `pngwolf` is a tool to minimize the size of PNG image files. There are
 a number of factors that affect the size of PNG image files, such as
 the number of colors in the image and whether the image data is stored
@@ -26,30 +33,30 @@ That is, in essence, what `pngwolf` does, over and over again. Further,
 the most widely used PNG encoders use the zlib library for compression.
 The zlib library favours speed over compression ratio in some cases, so
 whatever filters are selected to aid compression, the result with zlib
-may not be the smallest possible. The Zopfli library has a Deflate en-
-coder that favours size over speed at certain settings. So, `pngwolf`
+may not be the smallest possible. The Zopfli library has a Deflate
+encoder that favours size over speed at certain settings. So, `pngwolf`
 attempts to make use of both: a fast zlib setting is used to estimate
 how well some filter combination aids compression, and when it gets
 bored, it uses Zopfli to generate the final result.
 
 Doing this `pngwolf` is able to compress some images better than other
 optimizers (like `OptiPNG`, `AdvanceCOMP`, `pngcrush`, and `pngout`),
-either because it finds better filter combinations then they do, or be-
-cause it uses Zopfli's Deflate implementation. It does not attempt to
+either because it finds better filter combinations then they do, or
+because it uses Zopfli's Deflate implementation. It does not attempt to
 make other optimizations, like converting indexed images to RGB format.
 
-None of the tools mentioned, including `pngwolf` follow any kind of ho-
-listic approach to PNG optimization, so to get the best results they
+None of the tools mentioned, including `pngwolf` follow any kind of
+holistic approach to PNG optimization, so to get the best results they
 need to be used in combination (and sometimes applying them repeatedly
 or in different orders provides the best results). As far as I can tell
 most other tools do not try to preserve the filter combination in the
-original image, so `pngwolf` should usually be used last or second-to-
-last in the optimization process.
+original image, so `pngwolf` should usually be used last or
+second-to-last in the optimization process.
 
 For images that are already optimized using all the other tools, there
-is about `1%` further reduction to be expected from `pngwolf` for suit-
-able images. Still, it should be rare to find images on the Web that
-`pngwolf` cannot compress a little bit further.
+is about `1%` further reduction to be expected from `pngwolf` for
+suitable images. Still, it should be rare to find images on the Web
+that `pngwolf` cannot compress a little bit further.
 
 The tool suffers from the lack of a Deflate encoder that makes it easy
 store the results of data analysis (where are duplicate substrings in
@@ -61,11 +68,11 @@ best results.
 
 Regardless of the performance deficiency `pngwolf` is well-suited as a
 research tool to come up with better heuristics for filter selection,
-or to extend the genetic algorithm approach to other aspects of PNG op-
-timization (the main thing being considered is re-arranging the entries
-in color palettes so the image data compresses better). The tool logs
-extensive information in a YAML-based machine-readable format while it
-attempts to optimize images which should aid in that.
+or to extend the genetic algorithm approach to other aspects of PNG
+optimization (the main thing being considered is re-arranging the
+entries in color palettes so the image data compresses better). The
+tool logs extensive information in a YAML-based machine-readable format
+while it attempts to optimize images which should aid in that.
 
 It also addresses two (other) user-interface issues I had in using the
 other tools, namely it allows you to make it stop trying to find better
@@ -73,20 +80,30 @@ optimizations at well-specified points (such as the total time used),
 and if you start an optimization run but grow impatient and abort the
 program, results should not get lost, but should be stored anyway.
 
-To compile `pngwolf` you need three additional libraries:
 
-  * GAlib  http://lancet.mit.edu/ga/dist/
-  * Zopfli https://github.com/google/zopfli/
-  * zlib   http://zlib.net/
+How to Build
+------------
+
+To compile `pngwolf-zopfli` you need three additional libraries:
+
+  * [GAlib](http://lancet.mit.edu/ga/dist/)
+  * [Zopfli](https://github.com/google/zopfli/)
+  * [zlib](http://zlib.net/)
 
 Put these into `galib`, `zopfli`, and `zlib` sub-directories into the
-directory where pngwolf.cxx is located, and then either use the CMake
-utility (http://www.cmake.org/) on the `CMakeLists.txt`, use one of
-the supplied makefiles, or simply specify all the files specified in
-`CMakeLists.txt` as input to your compiler.
+directory where pngwolf.cxx is located.
 
-Note: `galib247.patch` fixes an issue in GAlib 2.4.7 when compiling
-with GCC and Clang, and adds parallel evaluation using OpenMP.
+`galib247.patch` fixes an issue in GAlib 2.4.7 when compiling with GCC
+and Clang, and adds parallel evaluation using OpenMP.
 
-Note: This version was modified to use Zopfli for the final compression
-step.
+Use the [CMake utility](http://www.cmake.org/) on the `CMakeLists.txt`,
+use one of the supplied makefiles, or simply specify all the files
+specified in `CMakeLists.txt` as input to your compiler.
+
+
+License
+-------
+
+The original `pngwolf` is licensed under GPLv2-or-later. The `pngwolf-zopfli`
+version as a whole is licensed under GPLv3, to allow distribution of binaries
+linked with Zopfli (which is licensed under the Apache License, Version 2.0).
