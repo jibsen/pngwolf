@@ -87,11 +87,11 @@ How to Build
 To compile `pngwolf-zopfli` you need three additional libraries:
 
   * [GAlib](http://lancet.mit.edu/ga/dist/)
-  * [Zopfli](https://github.com/google/zopfli/)
   * [zlib](http://zlib.net/)
+  * [Zopfli](https://github.com/google/zopfli/)
 
-Put these into `galib`, `zopfli`, and `zlib` sub-directories into the
-directory where pngwolf.cxx is located.
+Put these into `galib`, `zlib`, and `zopfli` sub-directories into the
+directory where `pngwolf.cxx` is located.
 
 `galib247.patch` fixes an issue in GAlib 2.4.7 when compiling with GCC
 and Clang, and adds parallel evaluation using OpenMP.
