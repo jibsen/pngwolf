@@ -8,6 +8,10 @@ if(OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
+if(MSVC)
+  add_definitions(/D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 include_directories(galib zlib zopfli/src/zopfli)
 
 add_executable(pngwolf
