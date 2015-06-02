@@ -1,6 +1,7 @@
-diff -Nurp galib/ga/GA1DArrayGenome.C galib/ga/GA1DArrayGenome.C
---- galib/ga/GA1DArrayGenome.C	2007-03-07 14:16:43.000000000 +0100
-+++ galib/ga/GA1DArrayGenome.C	2015-05-06 09:55:09.901083041 +0200
+diff --git a/galib/ga/GA1DArrayGenome.C b/galib/ga/GA1DArrayGenome.C
+index d7471e8..24cc149 100644
+--- a/galib/ga/GA1DArrayGenome.C
++++ b/galib/ga/GA1DArrayGenome.C
 @@ -50,7 +50,7 @@ GAGenome(DEFAULT_1DARRAY_INITIALIZER,
    evaluator(f);
    userData(u);
@@ -40,9 +41,10 @@ diff -Nurp galib/ga/GA1DArrayGenome.C galib/ga/GA1DArrayGenome.C
  }
  
  
-diff -Nurp galib/ga/GA2DArrayGenome.C galib/ga/GA2DArrayGenome.C
---- galib/ga/GA2DArrayGenome.C	2007-03-07 14:16:43.000000000 +0100
-+++ galib/ga/GA2DArrayGenome.C	2015-05-06 09:55:09.901083041 +0200
+diff --git a/galib/ga/GA2DArrayGenome.C b/galib/ga/GA2DArrayGenome.C
+index 64cede5..a9cc01c 100644
+--- a/galib/ga/GA2DArrayGenome.C
++++ b/galib/ga/GA2DArrayGenome.C
 @@ -39,7 +39,7 @@ GAGenome(DEFAULT_2DARRAY_INITIALIZER,
  {
    evaluator(f);
@@ -82,9 +84,10 @@ diff -Nurp galib/ga/GA2DArrayGenome.C galib/ga/GA2DArrayGenome.C
  }
  
  
-diff -Nurp galib/ga/GA3DArrayGenome.C galib/ga/GA3DArrayGenome.C
---- galib/ga/GA3DArrayGenome.C	2007-03-07 14:16:43.000000000 +0100
-+++ galib/ga/GA3DArrayGenome.C	2015-05-06 09:55:09.905083041 +0200
+diff --git a/galib/ga/GA3DArrayGenome.C b/galib/ga/GA3DArrayGenome.C
+index 62219d2..4fd4f38 100644
+--- a/galib/ga/GA3DArrayGenome.C
++++ b/galib/ga/GA3DArrayGenome.C
 @@ -39,7 +39,7 @@ GAGenome(DEFAULT_3DARRAY_INITIALIZER,
  {
    evaluator(f);
@@ -124,27 +127,15 @@ diff -Nurp galib/ga/GA3DArrayGenome.C galib/ga/GA3DArrayGenome.C
  }
  
  
-diff -Nurp galib/ga/gaerror.C galib/ga/gaerror.C
---- galib/ga/gaerror.C	2007-03-07 14:16:43.000000000 +0100
-+++ galib/ga/gaerror.C	2015-05-09 11:54:06.650444579 +0200
-@@ -21,7 +21,7 @@ char _gaerrbuf2[120];
- static STD_OSTREAM *__gaErrStream = & STD_CERR;
- #endif
- static GABoolean __gaErrFlag = gaTrue;
--static char *__gaErrStr[] = {
-+static const char *__gaErrStr[] = {
-   "error reading from file: ",
-   "error writing to file: ",
-   "unexpected EOF encountered during read.",
-diff -Nurp galib/ga/GAIncGA.C galib/ga/GAIncGA.C
---- galib/ga/GAIncGA.C	2007-03-07 14:16:43.000000000 +0100
-+++ galib/ga/GAIncGA.C	2015-05-20 15:24:33.689011205 +0200
-@@ -237,7 +237,17 @@ GAIncrementalGA::step()
+diff --git a/galib/ga/GAIncGA.C b/galib/ga/GAIncGA.C
+index 77b38ab..5f73e6c 100644
+--- a/galib/ga/GAIncGA.C
++++ b/galib/ga/GAIncGA.C
+@@ -237,6 +237,16 @@ GAIncrementalGA::step()
  
      stats.numeval += c1 + c2;
  
--    if(rs == PARENT){
-+ #ifdef _OPENMP
++#ifdef _OPENMP
 +    #pragma omp parallel sections
 +    {
 +      #pragma omp section
@@ -154,7 +145,19 @@ diff -Nurp galib/ga/GAIncGA.C galib/ga/GAIncGA.C
 +    }
 +#endif
 +
-+   if(rs == PARENT){
+     if(rs == PARENT){
        child1 = pop->replace(child1, mom);
        if(mom == dad)		// this is a possibility, if so do worst
- 	child2 = pop->replace(child2, GAPopulation::WORST);
+diff --git a/galib/ga/gaerror.C b/galib/ga/gaerror.C
+index c19d03d..8600518 100644
+--- a/galib/ga/gaerror.C
++++ b/galib/ga/gaerror.C
+@@ -21,7 +21,7 @@ char _gaerrbuf2[120];
+ static STD_OSTREAM *__gaErrStream = & STD_CERR;
+ #endif
+ static GABoolean __gaErrFlag = gaTrue;
+-static char *__gaErrStr[] = {
++static const char *__gaErrStr[] = {
+   "error reading from file: ",
+   "error writing to file: ",
+   "unexpected EOF encountered during read.",
