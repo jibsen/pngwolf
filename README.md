@@ -96,6 +96,9 @@ directory where `pngwolf.cxx` is located.
 `galib247.patch` fixes an issue in GAlib 2.4.7 when compiling with GCC
 and Clang, and adds parallel evaluation using OpenMP.
 
+If you cloned the git repository, you can use
+`git submodule update --init --recursive` to retrieve these dependencies.
+
 Use the [CMake utility](http://www.cmake.org/) on the `CMakeLists.txt`,
 use one of the supplied makefiles, or simply specify all the files
 specified in `CMakeLists.txt` as input to your compiler.
