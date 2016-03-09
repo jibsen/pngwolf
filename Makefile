@@ -8,9 +8,9 @@
 
 .PHONY: clean all
 
-CFLAGS = -Wall -ansi -pedantic -Ofast -flto -fopenmp -DZLIB_CONST
+CFLAGS = -Wall -ansi -pedantic -O2 -flto -fopenmp
 CXXFLAGS = $(CFLAGS) -std=c++11
-LDFLAGS = -fuse-linker-plugin
+CPPFLAGS = -DNDEBUG -DZLIB_CONST -Igalib -Izlib -Izopfli/src/zopfli
 
 ifeq ($(OS),Windows_NT)
   LDFLAGS += -static
@@ -46,19 +46,19 @@ target = pngwolf
 all: $(target)
 
 %.o : %.cxx
-	$(CXX) $(CXXFLAGS) -I galib -I zlib -I zopfli/src/zopfli -o $@ -c $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 galib/ga/%.o : galib/ga/%.C
-	$(CXX) $(CXXFLAGS) -I galib -o $@ -c $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 zlib/%.o : zlib/%.c
-	$(CC) $(CFLAGS) -I zlib -o $@ -c $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 zopfli/src/zopfli/%.o : zopfli/src/zopfli/%.c
-	$(CC) $(CFLAGS) -I zopfli/src/zopfli -o $@ -c $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c -o $@ $<
 
 $(target): $(objs)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 clean:
 	$(RM) $(objs) $(target)

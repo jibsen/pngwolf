@@ -7,8 +7,9 @@
 .SUFFIXES:
 .SUFFIXES: .obj .cxx .C .c
 
-CFLAGS = /W2 /O2 /fp:fast /GL /openmp /DZLIB_CONST
+CFLAGS = /W2 /O2 /fp:fast /GL /openmp
 CXXFLAGS = $(CFLAGS) /TP /EHsc
+CPPFLAGS = /DNDEBUG /DZLIB_CONST /Igalib /Izlib /Izopfli\src\zopfli
 LDFLAGS = /release
 LDLIBS = ws2_32.lib
 
@@ -44,19 +45,19 @@ target = pngwolf.exe
 all: $(target)
 
 .cxx.obj:
-	$(CXX) $(CXXFLAGS) /Igalib /Izlib /Izopfli\src\zopfli /Fo$@ /c $<
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) /c $<
 
 {galib\ga}.C{galib\ga}.obj::
-	$(CXX) /MP $(CXXFLAGS) /Igalib /Fogalib\ga\ /c $<
+	$(CXX) /MP $(CXXFLAGS) $(CPPFLAGS) /Fogalib\ga\ /c $<
 
 {zlib}.c{zlib}.obj::
-	$(CC) /MP $(CFLAGS) /Izlib /Fozlib\ /c $<
+	$(CC) /MP $(CFLAGS) $(CPPFLAGS) /Fozlib\ /c $<
 
 {zopfli\src\zopfli}.c{zopfli\src\zopfli}.obj::
-	$(CC) /MP $(CFLAGS) /Izopfli\src\zopfli /Fozopfli\src\zopfli\ /c $<
+	$(CC) /MP $(CFLAGS) $(CPPFLAGS) /Fozopfli\src\zopfli\ /c $<
 
 $(target): $(objs)
-	$(CC) $(CFLAGS) /Fe$@ $** /link $(LDFLAGS) $(LDLIBS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) /Fe$@ $** /link $(LDFLAGS) $(LDLIBS)
 
 clean:
 	del /Q $(objs) $(target)
