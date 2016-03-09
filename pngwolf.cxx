@@ -148,7 +148,6 @@ public:
   int zlib_memLevel;
   int zlib_strategy;
   int zop_iter;
-  bool zop_splitlast;
   int zop_maxsplit;
   std::vector<uint32_t> strip_chunks;
   bool strip_optional;
@@ -173,7 +172,7 @@ public:
   std::vector<char> original_deflated;
   std::vector<char> original_unfiltered;
 
-  // 
+  //
   std::map<PngFilter, std::vector<char> > flt_singles;
 
   //
@@ -285,7 +284,6 @@ public:
 
     zopt.verbose = zop_verbose;
     zopt.numiterations = zop_iter;
-    zopt.blocksplittinglast = zop_splitlast ? 1 : 0;
     zopt.blocksplittingmax = zop_maxsplit;
 
     // TODO: figure out what to do with errors here
@@ -301,16 +299,14 @@ public:
     return deflated;
   }
 
-  DeflateZopfli(int iter, bool splitlast, int maxsplit, bool verbose) :
+  DeflateZopfli(int iter, int maxsplit, bool verbose) :
     zop_iter(iter),
-    zop_splitlast(splitlast),
     zop_maxsplit(maxsplit),
     zop_verbose(verbose) {
   }
 
 private:
   int zop_iter;
-  bool zop_splitlast;
   int zop_maxsplit;
   bool zop_verbose;
 };
@@ -399,7 +395,7 @@ void filter_row_avg(unsigned char* src, unsigned char* dst, size_t row, size_t p
 
   for (; xix < row * bytes + 1 + pwidth; ++xix, ++bix)
     dst[xix] = src[xix] - (src[bix] >> 1);
-  
+
   for (; xix < end; ++xix, ++aix, ++bix)
     dst[xix] = src[xix] - ((src[aix] + src[bix]) >> 1);
 }
@@ -424,7 +420,7 @@ void filter_row_paeth(unsigned char* src, unsigned char* dst, size_t row, size_t
   // TODO: this should not change pwidth
   for (; pwidth > 0; --pwidth, ++xix, ++bix)
     dst[xix] = src[xix] - paeth_predictor(0, src[bix] , 0);
-  
+
   for (; xix < end; ++xix, ++aix, ++bix, ++cix)
     dst[xix] = src[xix] - paeth_predictor(src[aix], src[bix], src[cix]);
 }
@@ -467,7 +463,7 @@ void unfilter_row_avg(unsigned char* idat, size_t row, size_t pwidth, size_t byt
   aix = xix;
   for (; pwidth > 0; --pwidth)
     idat[xix++] += idat[bix++] >> 1;
-  
+
   while (xix < end)
     idat[xix++] += (idat[aix++] + idat[bix++]) >> 1;
 }
@@ -491,7 +487,7 @@ void unfilter_row_paeth(unsigned char* idat, size_t row, size_t pwidth, size_t b
 
   for (; pwidth > 0; --pwidth)
     idat[xix++] += paeth_predictor(0, idat[bix++] , 0);
-  
+
   while (xix < end)
     idat[xix++] += paeth_predictor(idat[aix++], idat[bix++] , idat[cix++]);
 }
@@ -837,7 +833,7 @@ void PngWolf::log_analysis() {
 
 void PngWolf::log_critter(PngFilterGenome* curr_best) {
   PngFilterGenome* prev_best = best_genomes.back();
-  
+
   if (!this->verbose_genomes) {
     fprintf(stdout, ""
       "- zlib deflated idat size: %7u # %+5d bytes %+4.0f seconds\n",
@@ -924,7 +920,7 @@ void PngWolf::init_filters() {
     // filters, and select the filter that gives the smallest
     // sum of absolute values of outputs. (Consider the output
     // bytes as signed differences for this test.) This method
-    // usually outperforms any single fixed filter choice." as 
+    // usually outperforms any single fixed filter choice." as
     // per <http://www.w3.org/TR/PNG/#12Filter-selection>.
 
     // Note that I've found this to be incorrect, as far as
@@ -1708,7 +1704,7 @@ void show_help(void) {
     "  --zlib-window=<int>            zlib estimator window bits (default: 15)     \n"
     "  --zlib-memlevel=<int>          zlib estimator memory level (default: 8)     \n"
     "  --zopfli-iter=<int>            Zopfli iterations (default: 15)              \n"
-    "  --zopfli-splitlast             Zopfli split blocks after compression        \n"
+    "  --zopfli-splitlast             (Deprecated)                                 \n"
     "  --zopfli-maxsplit=<int>        Zopfli max blocks to split into (default: 15)\n"
     "  --verbose-analysis             More details in initial image analysis       \n"
     "  --verbose-summary              More details in optimization summary         \n"
@@ -1800,7 +1796,6 @@ int main(int argc, char *argv[]) {
   int argZlibMemlevel = 8;
   int argZlibWindow = 15;
   int argZopfliIter = 15;
-  bool argZopfliSplitLast = false;
   int argZopfliMaxSplit = 15;
   std::vector<uint32_t> argStripChunks;
   bool argStripOptional = false;
@@ -1885,7 +1880,7 @@ int main(int argc, char *argv[]) {
       continue;
 
     } else if (strcmp("--zopfli-splitlast", s) == 0) {
-      argZopfliSplitLast = true;
+      fprintf(stdout, "# Warning: --zopfli-splitlast is deprecated\n");
       continue;
 
     } else if (strcmp("--strip-optional", s) == 0) {
@@ -1995,7 +1990,7 @@ int main(int argc, char *argv[]) {
   }
 
   DeflateZlib fast(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
-  DeflateZopfli good(argZopfliIter, argZopfliSplitLast, argZopfliMaxSplit, argVerboseZopfli);
+  DeflateZopfli good(argZopfliIter, argZopfliMaxSplit, argVerboseZopfli);
 
   wolf.zlib_level = argZlibLevel;
   wolf.zlib_memLevel = argZlibMemlevel;
@@ -2029,7 +2024,6 @@ int main(int argc, char *argv[]) {
   wolf.auto_mpass = argAutoMpass;
   wolf.bigger_is_better = argBiggerIsBetter;
   wolf.zop_iter = argZopfliIter;
-  wolf.zop_splitlast = argZopfliSplitLast;
   wolf.zop_maxsplit = argZopfliMaxSplit;
   wolf.strip_chunks = argStripChunks;
   wolf.strip_optional = argStripOptional;
