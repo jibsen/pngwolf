@@ -1,0 +1,10 @@
+[submodule "galib"]
+	path = galib
+	url = https://github.com/jibsen/galib.git
+	branch = pngwolf-support
+[submodule "zlib"]
+	path = zlib
+	url = https://github.com/madler/zlib.git
+[submodule "zopfli"]
+	path = zopfli
+	url = https://github.com/google/zopfli.git
