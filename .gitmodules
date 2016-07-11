@@ -8,3 +8,6 @@
 [submodule "zopfli"]
 	path = zopfli
 	url = https://github.com/google/zopfli.git
+[submodule "libdeflate"]
+	path = libdeflate
+	url = https://github.com/ebiggers/libdeflate.git

@@ -47,6 +47,7 @@
 #endif
 
 #include "ga/ga.h"
+#include "libdeflate.h"
 #include "zlib.h"
 #include "zopfli.h"
 
@@ -223,6 +224,41 @@ public:
   }
 };
 
+struct DeflateLibdeflate : public Deflater {
+public:
+  std::vector<char> deflate(const std::vector<char>& inflated) {
+    struct deflate_compressor *compressor = nullptr;
+
+    compressor = deflate_alloc_compressor(z_level);
+
+    if (compressor == nullptr)
+      abort();
+
+    const size_t maxsize = zlib_compress_bound(compressor, inflated.size());
+    std::vector<char> new_deflated(maxsize);
+
+    size_t res = zlib_compress(compressor, inflated.data(), inflated.size(),
+                               new_deflated.data(), new_deflated.size());
+
+    deflate_free_compressor(compressor);
+
+    // TODO: aborting here probably leaks memory
+    if (res == 0)
+      abort();
+
+    new_deflated.resize(res);
+
+    return new_deflated;
+  }
+
+  DeflateLibdeflate(int level) :
+    z_level(level) {
+  }
+
+private:
+  int z_level;
+};
+
 struct DeflateZlib : public Deflater {
 public:
   std::vector<char> deflate(const std::vector<char>& inflated) {
@@ -233,9 +269,9 @@ public:
     strm.opaque = Z_NULL;
 
     if (deflateInit2(&strm, z_level, Z_DEFLATED,
-      z_windowBits, z_memLevel, z_strategy) != Z_OK) {
-        // TODO:
-        abort();
+        z_windowBits, z_memLevel, z_strategy) != Z_OK) {
+      // TODO:
+      abort();
     }
 
     strm.next_in = (z_const Bytef*)&inflated[0];
@@ -1736,8 +1772,8 @@ void show_help(void) {
     " Output images should be saved even if you send SIGINT (~CTRL+C) to `pngwolf`.\n"
     " The machine-readable progress report format is based on YAML http://yaml.org/\n"
     " -----------------------------------------------------------------------------\n"
-    " Uses http://zlib.net/ and http://lancet.mit.edu/ga/ and                      \n"
-    " https://github.com/google/zopfli/                                            \n"
+    " Uses http://lancet.mit.edu/ga/ and https://github.com/ebiggers/libdeflate and\n"
+    " http://zlib.net/ and https://github.com/google/zopfli/                       \n"
     " -----------------------------------------------------------------------------\n"
     " Note: This version was modified to use Zopfli for the final compression step,\n"
     "       https://github.com/jibsen/pngwolf-zopfli/                              \n"

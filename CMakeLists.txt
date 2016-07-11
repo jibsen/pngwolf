@@ -12,7 +12,7 @@ if(MSVC)
   add_definitions(/D_CRT_SECURE_NO_WARNINGS)
 endif()
 
-include_directories(galib zlib zopfli/src/zopfli)
+include_directories(galib libdeflate libdeflate/common zlib zopfli/src/zopfli)
 
 add_executable(pngwolf
   pngwolf.cxx
@@ -29,6 +29,11 @@ add_executable(pngwolf
   galib/ga/GAScaling.C
   galib/ga/GASelector.C
   galib/ga/GAStatistics.C
+  libdeflate/lib/adler32.c
+  libdeflate/lib/aligned_malloc.c
+  libdeflate/lib/deflate_compress.c
+  libdeflate/lib/x86_cpu_features.c
+  libdeflate/lib/zlib_compress.c
   zlib/adler32.c
   zlib/compress.c
   zlib/crc32.c

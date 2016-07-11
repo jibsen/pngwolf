@@ -9,7 +9,7 @@
 
 CFLAGS = /W2 /O2 /fp:fast /GL /openmp
 CXXFLAGS = $(CFLAGS) /TP /EHsc
-CPPFLAGS = /DNDEBUG /DZLIB_CONST /Igalib /Izlib /Izopfli\src\zopfli
+CPPFLAGS = /DNDEBUG /DZLIB_CONST /Igalib /Ilibdeflate /Izlib /Izopfli\src\zopfli
 LDFLAGS = /release
 LDLIBS = ws2_32.lib
 
@@ -27,6 +27,10 @@ objs_galib = galib\ga\GA1DArrayGenome.obj galib\ga\GAAllele.obj \
   galib\ga\garandom.obj galib\ga\gaerror.obj galib\ga\GAScaling.obj \
   galib\ga\GASelector.obj galib\ga\GAStatistics.obj
 
+objs_libdeflate = libdeflate\lib\adler32.obj libdeflate\lib\aligned_malloc.obj \
+  libdeflate\lib\deflate_compress.obj libdeflate\lib\x86_cpu_features.obj \
+  libdeflate\lib\zlib_compress.obj
+
 objs_zlib = zlib\adler32.obj zlib\crc32.obj zlib\deflate.obj zlib\compress.obj \
   zlib\infback.obj zlib\inffast.obj zlib\inflate.obj zlib\inftrees.obj zlib\trees.obj \
   zlib\uncompr.obj zlib\zutil.obj
@@ -38,7 +42,7 @@ objs_zopfli = zopfli\src\zopfli\blocksplitter.obj zopfli\src\zopfli\cache.obj \
   zopfli\src\zopfli\tree.obj zopfli\src\zopfli\util.obj \
   zopfli\src\zopfli\zlib_container.obj zopfli\src\zopfli\zopfli_lib.obj
 
-objs = $(objs_pngwolf) $(objs_galib) $(objs_zlib) $(objs_zopfli)
+objs = $(objs_pngwolf) $(objs_galib) $(objs_libdeflate) $(objs_zlib) $(objs_zopfli)
 
 target = pngwolf.exe
 
@@ -49,6 +53,9 @@ all: $(target)
 
 {galib\ga}.C{galib\ga}.obj::
 	$(CXX) /MP $(CXXFLAGS) $(CPPFLAGS) /Fogalib\ga\ /c $<
+
+{libdeflate\lib}.c{libdeflate\lib}.obj::
+	$(CC) /MP $(CFLAGS) $(CPPFLAGS) /Ilibdeflate\common /Folibdeflate\lib\ /c $<
 
 {zlib}.c{zlib}.obj::
 	$(CC) /MP $(CFLAGS) $(CPPFLAGS) /Fozlib\ /c $<
