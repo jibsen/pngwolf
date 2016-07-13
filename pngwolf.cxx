@@ -74,6 +74,12 @@ enum PngFilter {
   Paeth = 4
 };
 
+enum class Estimator {
+  libdeflate,
+  zlib,
+  zopfli,
+};
+
 struct PngChunk {
   uint32_t size;
   uint32_t type;
@@ -144,6 +150,7 @@ public:
   bool even_if_bigger;
   bool auto_mpass;
   bool bigger_is_better;
+  int libdeflate_level;
   int zlib_level;
   int zlib_windowBits;
   int zlib_memLevel;
@@ -1735,10 +1742,12 @@ void show_help(void) {
     "  --max-stagnate-time=<seconds>  Give up if no improvement is found (d: 5)    \n"
     "  --max-deflate=<megabytes>      Give up after deflating this many megabytes  \n"
     "  --max-evaluations=<int>        Give up after evaluating this many genomes   \n"
-    "  --zlib-level=<int>             zlib estimator compression level (default: 5)\n"
-    "  --zlib-strategy=<int>          zlib estimator strategy (default: 0)         \n"
-    "  --zlib-window=<int>            zlib estimator window bits (default: 15)     \n"
-    "  --zlib-memlevel=<int>          zlib estimator memory level (default: 8)     \n"
+    "  --estimator=<name>             Estimator (libdeflate, zlib, zopfli)         \n"
+    "  --libdeflate-level=<int>       libdeflate compression level (default: 5)    \n"
+    "  --zlib-level=<int>             zlib compression level (default: 5)          \n"
+    "  --zlib-strategy=<int>          zlib strategy (default: 0)                   \n"
+    "  --zlib-window=<int>            zlib window bits (default: 15)               \n"
+    "  --zlib-memlevel=<int>          zlib memory level (default: 8)               \n"
     "  --zopfli-iter=<int>            Zopfli iterations (default: 15)              \n"
     "  --zopfli-splitlast             (Deprecated)                                 \n"
     "  --zopfli-maxsplit=<int>        Zopfli max blocks to split into (default: 15)\n"
@@ -1827,6 +1836,8 @@ int main(int argc, char *argv[]) {
   int argMaxEvaluations = 0;
   int argMaxDeflate = 0;
   int argPopulationSize = 19;
+  Estimator argEstimator = Estimator::libdeflate;
+  int argLibdeflateLevel = 5;
   int argZlibLevel = 5;
   int argZlibStrategy = 0;
   int argZlibMemlevel = 8;
@@ -1966,6 +1977,22 @@ int main(int argc, char *argv[]) {
     } else if (strncmp("--population-size", s, nlen) == 0) {
       argPopulationSize = atoi(value);
 
+    } else if (strncmp("--estimator", s, nlen) == 0) {
+      if (strcmp("libdeflate", value) == 0) {
+        argEstimator = Estimator::libdeflate;
+      } else if (strcmp("zlib", value) == 0) {
+        argEstimator = Estimator::zlib;
+      } else if (strcmp("zopfli", value) == 0) {
+        argEstimator = Estimator::zopfli;
+      } else {
+        argOkay = 0;
+      }
+
+    } else if (strncmp("--libdeflate-level", s, nlen) == 0) {
+      argLibdeflateLevel = atoi(value);
+      argOkay &= argLibdeflateLevel >= 1;
+      argOkay &= argLibdeflateLevel <= 12;
+
     } else if (strncmp("--zlib-level", s, nlen) == 0) {
       argZlibLevel = atoi(value);
       argOkay &= argZlibLevel >= 0;
@@ -2020,20 +2047,38 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
-  if (argHelp || argPng == NULL || !argOkay) {
+  if (argHelp) {
     show_help();
     return EXIT_SUCCESS;
   }
 
-  DeflateZlib fast(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
-  DeflateZopfli good(argZopfliIter, argZopfliMaxSplit, argVerboseZopfli);
+  if (argPng == NULL || !argOkay) {
+    show_help();
+    return EXIT_FAILURE;
+  }
 
+  DeflateLibdeflate libdeflate_deflater(argLibdeflateLevel);
+  DeflateZlib zlib_deflater(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
+  DeflateZopfli zopfli_deflater(argZopfliIter, argZopfliMaxSplit, argVerboseZopfli);
+
+  switch (argEstimator) {
+  case Estimator::zlib:
+    wolf.deflate_fast = &zlib_deflater;
+    break;
+  case Estimator::zopfli:
+    wolf.deflate_fast = &zopfli_deflater;
+    break;
+  default:
+    wolf.deflate_fast = &libdeflate_deflater;
+    break;
+  }
+
+  wolf.deflate_good = &zopfli_deflater;
+  wolf.libdeflate_level = argLibdeflateLevel;
   wolf.zlib_level = argZlibLevel;
   wolf.zlib_memLevel = argZlibMemlevel;
   wolf.zlib_strategy = argZlibStrategy;
   wolf.zlib_windowBits = argZlibWindow;
-  wolf.deflate_fast = &fast;
-  wolf.deflate_good = &good;
   wolf.in_path = argPng;
   wolf.max_deflate = argMaxDeflate;
   wolf.max_evaluations = argMaxEvaluations;
