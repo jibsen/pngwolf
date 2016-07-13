@@ -61,7 +61,7 @@
 #pragma warning(disable: 4100)
 #endif
 
-#define PNGWOLF_VERSION "1.0.1"
+#define PNGWOLF_VERSION "1.1.0"
 
 ////////////////////////////////////////////////////////////////////
 // Miscellaneous structures and types
