@@ -741,10 +741,10 @@ void PngWolf::log_summary() {
     fprintf(stdout, "best filter sequence found:");
     log_genome(best_genomes.back());
     fprintf(stdout, ""
-      "best zlib deflated idat size: %0.0f\n"
+      "best deflated idat size:      %0.0f\n"
       "total time spent optimizing:  %0.0f\n"
       "number of genomes evaluated:  %u\n"
-      "size of Zopfli deflated data:   %u\n"
+      "size of Zopfli deflated data: %u\n"
       "size difference to original:  %d\n",
       best_genomes.back()->score(),
       difftime(time(NULL), program_begun_at),
@@ -834,7 +834,7 @@ void PngWolf::log_analysis() {
   }
 
   fprintf(stdout, ""
-    "zlib deflated idat sizes:\n"
+    "deflated idat sizes:\n"
     "  original filter:  %0.0f\n"
     "  none:             %0.0f\n"
     "  sub:              %0.0f\n"
@@ -879,7 +879,7 @@ void PngWolf::log_critter(PngFilterGenome* curr_best) {
 
   if (!this->verbose_genomes) {
     fprintf(stdout, ""
-      "- zlib deflated idat size: %7u # %+5d bytes %+4.0f seconds\n",
+      "- deflated idat size: %7u # %+5d bytes %+4.0f seconds\n",
       unsigned(curr_best->score()),
       signed(curr_best->score() - initial_pop.best().score()),
       difftime(time(NULL), program_begun_at));
@@ -887,15 +887,15 @@ void PngWolf::log_critter(PngFilterGenome* curr_best) {
   }
 
   fprintf(stdout, ""
-    "  ##########################################################################\n"
-    "- zlib deflated idat size: %7u # %+5d bytes %+4.0f seconds since previous\n"
-    "  ##########################################################################\n"
-    "  zlib bytes since previous improvement: %+d\n"
-    "  zlib bytes since first generation:     %+d\n"
-    "  seconds since program launch:          %+0.0f\n"
-    "  seconds since previous improvement:    %+0.0f\n"
-    "  current generation is the nth:          %u\n"
-    "  number of genomes evaluated:            %u\n"
+    "  #####################################################################\n"
+    "- deflated idat size: %7u # %+5d bytes %+4.0f seconds since previous\n"
+    "  #####################################################################\n"
+    "  deflated bytes since previous improvement: %+d\n"
+    "  deflated bytes since first generation:     %+d\n"
+    "  seconds since program launch:              %+0.0f\n"
+    "  seconds since previous improvement:        %+0.0f\n"
+    "  current generation is the nth:             %u\n"
+    "  number of genomes evaluated:               %u\n"
     "  best filters so far:",
     unsigned(curr_best->score()),
     signed(curr_best->score() - prev_best->score()),
@@ -1772,7 +1772,7 @@ void show_help(void) {
     " use a similar approach to find a good arrangement of color palette entries). \n"
     "                                                                              \n"
     " To approximate the quality of a filter combination it compresses IDAT chunks \n"
-    " using `zlib` and ultimately uses the Deflate encoder in `Zopfli` to store the\n"
+    " using an estimator and ultimately uses the `Zopfli` encoder to store the     \n"
     " output image. It is slow because it recompresses the IDAT data fully for all \n"
     " filter combinations even if only minor changes are made or if two filter com-\n"
     " binations are merged, as `zlib` has no built-in support for caching analysis \n"
@@ -1781,8 +1781,8 @@ void show_help(void) {
     " Output images should be saved even if you send SIGINT (~CTRL+C) to `pngwolf`.\n"
     " The machine-readable progress report format is based on YAML http://yaml.org/\n"
     " -----------------------------------------------------------------------------\n"
-    " Uses http://lancet.mit.edu/ga/ and https://github.com/ebiggers/libdeflate and\n"
-    " http://zlib.net/ and https://github.com/google/zopfli/                       \n"
+    " Uses http://lancet.mit.edu/ga/ and https://github.com/ebiggers/libdeflate    \n"
+    " and http://zlib.net/ and https://github.com/google/zopfli/                   \n"
     " -----------------------------------------------------------------------------\n"
     " Note: This version was modified to use Zopfli for the final compression step,\n"
     "       https://github.com/jibsen/pngwolf-zopfli/                              \n"
