@@ -84,7 +84,7 @@ struct PngChunk {
   uint32_t size;
   uint32_t type;
   uint32_t crc32;
-  std::vector<char> data;
+  std::vector<unsigned char> data;
 };
 
 struct IhdrChunk {
@@ -101,7 +101,7 @@ typedef GA1DArrayAlleleGenome<PngFilter> PngFilterGenome;
 
 class Deflater {
 public:
-  virtual std::vector<char> deflate(const std::vector<char>&) = 0;
+  virtual std::vector<unsigned char> deflate(const std::vector<unsigned char>&) = 0;
 };
 
 class PngWolf {
@@ -176,12 +176,12 @@ public:
   time_t done_deflating_at;
 
   // IDAT
-  std::vector<char> original_inflated;
-  std::vector<char> original_deflated;
-  std::vector<char> original_unfiltered;
+  std::vector<unsigned char> original_inflated;
+  std::vector<unsigned char> original_deflated;
+  std::vector<unsigned char> original_unfiltered;
 
   //
-  std::map<PngFilter, std::vector<char> > flt_singles;
+  std::map<PngFilter, std::vector<unsigned char> > flt_singles;
 
   //
   std::map<uint32_t, size_t> invis_colors;
@@ -191,8 +191,8 @@ public:
   unsigned genomes_evaluated;
 
   //
-  std::vector<char> best_inflated;
-  std::vector<char> best_deflated;
+  std::vector<unsigned char> best_inflated;
+  std::vector<unsigned char> best_deflated;
 
   // The genetic algorithm
   GAGeneticAlgorithm* ga;
@@ -208,11 +208,11 @@ public:
   bool save_file();
   bool save_best_idat(const char* path);
   bool save_original_idat(const char* path);
-  bool save_idat(const char* path, std::vector<char>& deflated, std::vector<char>& inflated);
+  bool save_idat(const char* path, std::vector<unsigned char>& deflated, std::vector<unsigned char>& inflated);
   void init_filters();
   void run();
   void recompress();
-  std::vector<char> refilter(const PngFilterGenome& ge);
+  std::vector<unsigned char> refilter(const PngFilterGenome& ge);
   bool recompress_optional_chunk(PngChunk &chunk);
 
   // Constructor
@@ -233,7 +233,7 @@ public:
 
 struct DeflateLibdeflate : public Deflater {
 public:
-  std::vector<char> deflate(const std::vector<char>& inflated) {
+  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) {
     struct deflate_compressor *compressor = nullptr;
 
     compressor = deflate_alloc_compressor(z_level);
@@ -242,7 +242,7 @@ public:
       abort();
 
     const size_t maxsize = zlib_compress_bound(compressor, inflated.size());
-    std::vector<char> new_deflated(maxsize);
+    std::vector<unsigned char> new_deflated(maxsize);
 
     size_t res = zlib_compress(compressor, inflated.data(), inflated.size(),
                                new_deflated.data(), new_deflated.size());
@@ -268,7 +268,7 @@ private:
 
 struct DeflateZlib : public Deflater {
 public:
-  std::vector<char> deflate(const std::vector<char>& inflated) {
+  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) {
     z_stream strm;
 
     strm.zalloc = Z_NULL;
@@ -281,14 +281,14 @@ public:
       abort();
     }
 
-    strm.next_in = (z_const Bytef*)&inflated[0];
+    strm.next_in = inflated.data();
     strm.avail_in = inflated.size();
 
     size_t max = deflateBound(&strm, inflated.size());
-    std::vector<char> new_deflated(max);
+    std::vector<unsigned char> new_deflated(max);
 
-    strm.next_out = (Bytef*)&new_deflated[0];
-    strm.avail_out = max;
+    strm.next_out = new_deflated.data();
+    strm.avail_out = new_deflated.size();
 
     // TODO: aborting here probably leaks memory
     if (::deflate(&strm, Z_FINISH) != Z_STREAM_END)
@@ -317,10 +317,10 @@ private:
 
 struct DeflateZopfli : public Deflater {
 public:
-  std::vector<char> deflate(const std::vector<char>& inflated) {
+  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) {
 
     ZopfliOptions zopt;
-    unsigned char *pout = 0;
+    unsigned char* pout = 0;
     size_t outsize = 0;
 
     ZopfliInitOptions(&zopt);
@@ -332,10 +332,10 @@ public:
     // TODO: figure out what to do with errors here
 
     ZopfliCompress(&zopt, ZOPFLI_FORMAT_ZLIB,
-                   reinterpret_cast<const unsigned char *>(inflated.data()),
+                   inflated.data(),
                    inflated.size(), &pout, &outsize);
 
-    std::vector<char> deflated(pout, pout + outsize);
+    std::vector<unsigned char> deflated(pout, pout + outsize);
 
     free(pout);
 
@@ -616,22 +616,22 @@ GAAlleleSet<PngFilter>::allele() const {
   return (PngFilter)GARandomInt(lower(), upper());
 }
 
-std::vector<char> inflate_zlib(std::vector<char>& deflated) {
+std::vector<unsigned char> inflate_zlib(std::vector<unsigned char>& deflated) {
   z_stream strm;
   strm.zalloc = Z_NULL;
   strm.zfree = Z_NULL;
   strm.opaque = Z_NULL;
-  strm.next_in = (z_const Bytef*)&deflated[0];
+  strm.next_in = deflated.data();
   strm.avail_in = deflated.size();
-  std::vector<char> inflated;
-  std::vector<char> temp(65535);
+  std::vector<unsigned char> inflated;
+  std::vector<unsigned char> temp(65535);
 
   if (inflateInit(&strm) != Z_OK)
     goto error;
 
   do {
+      strm.next_out = temp.data();
       strm.avail_out = temp.size();
-      strm.next_out = (Bytef*)&temp[0];
       int ret = inflate(&strm, Z_NO_FLUSH);
 
       // TODO: going to `error` here probably leaks some memory
@@ -657,11 +657,10 @@ error:
   return inflated;
 }
 
-std::vector<char> PngWolf::refilter(const PngFilterGenome& ge) {
-  std::vector<char> refiltered(original_unfiltered.size());
+std::vector<unsigned char> PngWolf::refilter(const PngFilterGenome& ge) {
+  std::vector<unsigned char> refiltered(original_unfiltered.size());
 
-  filter_idat((unsigned char*)&original_unfiltered[0],
-    (unsigned char*)&refiltered[0], ge,
+  filter_idat(original_unfiltered.data(), refiltered.data(), ge,
     scanline_delta, scanline_width);
 
   return refiltered;
@@ -687,7 +686,7 @@ float Evaluator(GAGenome& genome) {
 
   // TODO: it would be better to do this incrementally.
 
-  std::vector<char> filtered(wolf.original_unfiltered.size());
+  std::vector<unsigned char> filtered(wolf.original_unfiltered.size());
 
   for (int row = 0; row < ge.size(); ++row) {
     size_t pos = wolf.scanline_width * row;
@@ -695,7 +694,7 @@ float Evaluator(GAGenome& genome) {
       &wolf.flt_singles[ge.gene(row)][pos], wolf.scanline_width);
   }
 
-  std::vector<char> deflated = wolf.deflate_fast->deflate(filtered);
+  std::vector<unsigned char> deflated = wolf.deflate_fast->deflate(filtered);
 
   return float(deflated.size());
 }
@@ -948,7 +947,7 @@ void PngWolf::init_filters() {
   flt_singles[Avg] = refilter(*genomes["all set to avg"]);
   flt_singles[Paeth] = refilter(*genomes["all set to paeth"]);
 
-  typedef std::map< PngFilter, std::vector<char> >::iterator flt_iter;
+  typedef std::map< PngFilter, std::vector<unsigned char> >::iterator flt_iter;
 
   // TODO: for bigger_is_better it might make sense to have a
   // function for the comparisons and set that so heuristics
@@ -976,7 +975,7 @@ void PngWolf::init_filters() {
     // the combination that performs better.
 
     for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
-      std::vector<char>::iterator scanline =
+      std::vector<unsigned char>::iterator scanline =
         flt_singles[fi->first].begin() + row * scanline_width;
 
       size_t sum = std::accumulate(scanline + 1,
@@ -1010,10 +1009,10 @@ void PngWolf::init_filters() {
     PngFilter best_flt = None;
 
     for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
-      std::vector<char>::iterator scanline =
+      std::vector<unsigned char>::iterator scanline =
         flt_singles[fi->first].begin() + row * scanline_width;
 
-      std::vector<char> line(scanline, scanline + scanline_width);
+      std::vector<unsigned char> line(scanline, scanline + scanline_width);
       size_t sum = deflate_fast->deflate(line).size();
 
       if (sum >= best_sum)
@@ -1033,8 +1032,8 @@ void PngWolf::init_filters() {
 
     for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
       std::bitset<65536> seen;
-      std::vector<char>::iterator it;
-      std::vector<char>::iterator scanline =
+      std::vector<unsigned char>::iterator it;
+      std::vector<unsigned char>::iterator scanline =
         flt_singles[fi->first].begin() + row * scanline_width;
 
       for (it = scanline; it < scanline + scanline_width; ++it)
@@ -1059,8 +1058,8 @@ void PngWolf::init_filters() {
 
     for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
       std::bitset<65536> seen;
-      std::vector<char>::iterator it;
-      std::vector<char>::iterator scanline =
+      std::vector<unsigned char>::iterator it;
+      std::vector<unsigned char>::iterator scanline =
         flt_singles[fi->first].begin() + row * scanline_width;
 
       for (it = scanline + 1; it < scanline + scanline_width; ++it)
@@ -1090,9 +1089,9 @@ void PngWolf::init_filters() {
   }
 
   size_t max = deflateBound(&strm, original_inflated.size());
-  std::vector<char> strm_deflated(max);
-  strm.next_out = (Bytef*)&strm_deflated[0];
-  strm.avail_out = max;
+  std::vector<unsigned char> strm_deflated(max);
+  strm.next_out = strm_deflated.data();
+  strm.avail_out = strm_deflated.size();
 
   for (int row = 0; row < ge.size(); ++row) {
     size_t pos = row * scanline_width;
@@ -1105,7 +1104,7 @@ void PngWolf::init_filters() {
       if (deflateCopy(&here, &strm) != Z_OK) {
       }
 
-      here.next_in = (z_const Bytef*)&flt_singles[fi->first][pos];
+      here.next_in = &flt_singles[fi->first][pos];
       here.avail_in = scanline_width;
 
       int status = deflate(&here, Z_FINISH);
@@ -1124,7 +1123,7 @@ void PngWolf::init_filters() {
     }
 
     genomes["incremental"]->gene(row, (PngFilter)best_flt);
-    strm.next_in = (z_const Bytef*)&flt_singles[(PngFilter)best_flt][pos];
+    strm.next_in = &flt_singles[(PngFilter)best_flt][pos];
     strm.avail_in = scanline_width;
 
     if (deflate(&strm, Z_NO_FLUSH) != Z_OK) {
@@ -1470,10 +1469,10 @@ bool PngWolf::read_file() {
 
   // TODO: copy properly here
   original_unfiltered.resize(original_inflated.size());
-  memcpy(&original_unfiltered[0],
-    &original_inflated[0], original_inflated.size());
+  memcpy(original_unfiltered.data(),
+    original_inflated.data(), original_inflated.size());
 
-  unfilter_idat((unsigned char*)&original_unfiltered[0],
+  unfilter_idat(original_unfiltered.data(),
     ihdr.height, scanline_delta, scanline_width);
 
   // Creates a histogram of the fully transparent pixels in the
@@ -1534,7 +1533,7 @@ bool PngWolf::save_best_idat(const char* path) {
   return save_idat(path, best_deflated, best_inflated);
 }
 
-bool PngWolf::save_idat(const char* path, std::vector<char>& deflated, std::vector<char>& inflated) {
+bool PngWolf::save_idat(const char* path, std::vector<unsigned char>& deflated, std::vector<unsigned char>& inflated) {
 
   // TODO: when there is a simple inflate() function, make this
   // assert when deflated and inflated to not mach each other.
@@ -1559,7 +1558,7 @@ bool PngWolf::save_idat(const char* path, std::vector<char>& deflated, std::vect
   // TODO: endianess?
 
   uint32_t crc = crc32(0L, Z_NULL, 0);
-  crc = crc32(crc, (const Bytef*)&inflated[0], inflated.size());
+  crc = crc32(crc, inflated.data(), inflated.size());
 
   if (fwrite(&crc, sizeof(crc), 1, out) != 1) {
   }
@@ -1576,7 +1575,7 @@ bool PngWolf::save_idat(const char* path, std::vector<char>& deflated, std::vect
 
 bool PngWolf::recompress_optional_chunk(PngChunk &chunk) {
   if (chunk.type == iCCP_TYPE) {
-    std::vector<char>::iterator i;
+    std::vector<unsigned char>::iterator i;
 
     // Find null seperator at end of profile name
     i = find(chunk.data.begin(), chunk.data.end(), 0);
@@ -1594,11 +1593,11 @@ bool PngWolf::recompress_optional_chunk(PngChunk &chunk) {
 
     ++i;
 
-    std::vector<char> original_deflated(i, chunk.data.end());
+    std::vector<unsigned char> original_deflated(i, chunk.data.end());
 
-    std::vector<char> inflated_data(inflate_zlib(original_deflated));
+    std::vector<unsigned char> inflated_data(inflate_zlib(original_deflated));
 
-    std::vector<char> deflated_data(deflate_good->deflate(inflated_data));
+    std::vector<unsigned char> deflated_data(deflate_good->deflate(inflated_data));
 
     if (deflated_data.size() < original_deflated.size()) {
       chunk.data.erase(i, chunk.data.end());
@@ -1808,7 +1807,7 @@ void show_version(void) {
 ////////////////////////////////////////////////////////////////////
 // main
 ////////////////////////////////////////////////////////////////////
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
 
   bool argHelp = false;
   bool argVerboseAnalysis = false;
