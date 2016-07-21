@@ -8,12 +8,12 @@
 
 .PHONY: clean all
 
-CFLAGS = -std=c99 -Wall -O2 -flto -fopenmp
-CXXFLAGS = -std=c++11 -Wall -O2 -flto -fopenmp
+CFLAGS = -std=c99 -Wall -march=native -O2 -flto -fopenmp
+CXXFLAGS = -std=c++11 -Wall -march=native -O2 -flto -fopenmp
 CPPFLAGS = -DNDEBUG -DZLIB_CONST -Igalib -Ilibdeflate -Izlib -Izopfli/src/zopfli
 
 ifeq ($(OS),Windows_NT)
-  LDFLAGS += -static
+  LDFLAGS += -static -s
   LDLIBS += -lws2_32
   ifeq ($(CC),cc)
     CC = gcc
