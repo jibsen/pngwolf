@@ -794,30 +794,27 @@ void PngWolf::log_analysis() {
     (unsigned int) this->original_inflated.size(),
     (unsigned int) this->original_deflated.size());
 
-  std::list<PngChunk>::iterator c_it;
-
-  for (c_it = chunks.begin(); c_it != chunks.end(); ++c_it) {
+  for (const auto& chunk : chunks) {
     // TODO: check that this is broken on bad endianess systems
     // Also, since no validation is performed for the types, it
     // is possible to break the YAML output with bad files, but
     // that does not seem all that important at the moment.
-    fprintf(stdout, "%c", (c_it->type >> 24));
-    fprintf(stdout, "%c", (c_it->type >> 16));
-    fprintf(stdout, "%c", (c_it->type >> 8));
-    fprintf(stdout, "%c", (c_it->type >> 0));
+    fprintf(stdout, "%c", (chunk.type >> 24));
+    fprintf(stdout, "%c", (chunk.type >> 16));
+    fprintf(stdout, "%c", (chunk.type >> 8));
+    fprintf(stdout, "%c", (chunk.type >> 0));
     fprintf(stdout, " ");
   }
 
   if (ihdr.color == 6 && ihdr.depth == 8) {
     fprintf(stdout, "\ninvisible colors:\n");
-    std::map<uint32_t, size_t>::iterator it;
     uint32_t total = 0;
 
     // TODO: htonl is probably not right here
-    for (it = invis_colors.begin(); it != invis_colors.end(); ++it) {
+    for (const auto& it : invis_colors) {
       fprintf(stdout, "  - %08X # %u times\n",
-        (unsigned int) htonl(it->first), (unsigned int) it->second);
-      total += it->second;
+        (unsigned int) htonl(it.first), (unsigned int) it.second);
+      total += it.second;
     }
 
     bool skip = invis_colors.size() == 1
@@ -947,8 +944,6 @@ void PngWolf::init_filters() {
   flt_singles[Avg] = refilter(*genomes["all set to avg"]);
   flt_singles[Paeth] = refilter(*genomes["all set to paeth"]);
 
-  typedef std::map< PngFilter, std::vector<unsigned char> >::iterator flt_iter;
-
   // TODO: for bigger_is_better it might make sense to have a
   // function for the comparisons and set that so heuristics
   // also work towards making the selection worse.
@@ -974,9 +969,9 @@ void PngWolf::init_filters() {
     // would be applying the heuristic and None to all and use
     // the combination that performs better.
 
-    for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
+    for (const auto& fi : flt_singles) {
       std::vector<unsigned char>::iterator scanline =
-        flt_singles[fi->first].begin() + row * scanline_width;
+        flt_singles[fi.first].begin() + row * scanline_width;
 
       size_t sum = std::accumulate(scanline + 1,
         scanline + scanline_width, 0, sum_abs);
@@ -988,7 +983,7 @@ void PngWolf::init_filters() {
         continue;
 
       best_sum = sum;
-      best_flt = fi->first;
+      best_flt = fi.first;
     }
 
     genomes["heuristic"]->gene(row, (PngFilter)best_flt);
@@ -1008,9 +1003,9 @@ void PngWolf::init_filters() {
     size_t best_sum = SIZE_MAX;
     PngFilter best_flt = None;
 
-    for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
+    for (const auto& fi : flt_singles) {
       std::vector<unsigned char>::iterator scanline =
-        flt_singles[fi->first].begin() + row * scanline_width;
+        flt_singles[fi.first].begin() + row * scanline_width;
 
       std::vector<unsigned char> line(scanline, scanline + scanline_width);
       size_t sum = deflate_fast->deflate(line).size();
@@ -1019,7 +1014,7 @@ void PngWolf::init_filters() {
         continue;
 
       best_sum = sum;
-      best_flt = fi->first;
+      best_flt = fi.first;
     }
 
     genomes["deflate scanline"]->gene(row, (PngFilter)best_flt);
@@ -1030,11 +1025,11 @@ void PngWolf::init_filters() {
     size_t best_sum = SIZE_MAX;
     PngFilter best_flt = None;
 
-    for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
+    for (const auto& fi : flt_singles) {
       std::bitset<65536> seen;
       std::vector<unsigned char>::iterator it;
       std::vector<unsigned char>::iterator scanline =
-        flt_singles[fi->first].begin() + row * scanline_width;
+        flt_singles[fi.first].begin() + row * scanline_width;
 
       for (it = scanline; it < scanline + scanline_width; ++it)
         seen.set(uint8_t(*it));
@@ -1045,7 +1040,7 @@ void PngWolf::init_filters() {
         continue;
 
       best_sum = sum;
-      best_flt = fi->first;
+      best_flt = fi.first;
     }
 
     genomes["distinct bytes"]->gene(row, (PngFilter)best_flt);
@@ -1056,11 +1051,11 @@ void PngWolf::init_filters() {
     size_t best_sum = SIZE_MAX;
     PngFilter best_flt = None;
 
-    for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
+    for (const auto& fi : flt_singles) {
       std::bitset<65536> seen;
       std::vector<unsigned char>::iterator it;
       std::vector<unsigned char>::iterator scanline =
-        flt_singles[fi->first].begin() + row * scanline_width;
+        flt_singles[fi.first].begin() + row * scanline_width;
 
       for (it = scanline + 1; it < scanline + scanline_width; ++it)
         seen.set((uint8_t(*(it - 1)) << 8) | uint8_t(*it));
@@ -1071,7 +1066,7 @@ void PngWolf::init_filters() {
         continue;
 
       best_sum = sum;
-      best_flt = fi->first;
+      best_flt = fi.first;
     }
 
     genomes["distinct bigrams"]->gene(row, (PngFilter)best_flt);
@@ -1098,13 +1093,13 @@ void PngWolf::init_filters() {
     size_t best_sum = INT_MAX;
     PngFilter best_flt = None;
 
-    for (flt_iter fi = flt_singles.begin(); fi != flt_singles.end(); ++fi) {
+    for (const auto& fi : flt_singles) {
       z_stream here;
 
       if (deflateCopy(&here, &strm) != Z_OK) {
       }
 
-      here.next_in = &flt_singles[fi->first][pos];
+      here.next_in = &flt_singles[fi.first][pos];
       here.avail_in = scanline_width;
 
       int status = deflate(&here, Z_FINISH);
@@ -1119,7 +1114,7 @@ void PngWolf::init_filters() {
         continue;
 
       best_sum = sum;
-      best_flt = fi->first;
+      best_flt = fi.first;
     }
 
     genomes["incremental"]->gene(row, (PngFilter)best_flt);
@@ -1147,9 +1142,8 @@ void PngWolf::init_filters() {
   // critters. Maybe the Wolf should have a second population that
   // owns them, that way the default deallocator should handle them.
 
-  typedef std::map<std::string, PngFilterGenome*>::iterator ge_iter;
-  for (ge_iter i = genomes.begin(); i != genomes.end(); ++i)
-    i->second->evaluate();
+  for (auto&& genome : genomes)
+    genome.second->evaluate();
 
   if (!exclude_singles) {
     initial_pop.add(*this->genomes["all set to none"]);
@@ -1624,46 +1618,44 @@ bool PngWolf::save_file() {
   // Then proceed with serializing the whole new list to a file.
 
   std::list<PngChunk> new_chunks;
-  std::list<PngChunk>::iterator i;
-  std::vector<uint32_t>::iterator j;
 
-  for (i = chunks.begin(); i != chunks.end(); ++i) {
-    if (i->type == IDAT_TYPE)
+  for (auto&& chunk : chunks) {
+    if (chunk.type == IDAT_TYPE)
       continue;
 
-    if (i->type != IEND_TYPE) {
-      if (i->type == IHDR_TYPE) {
-        new_chunks.push_back(*i);
+    if (chunk.type != IEND_TYPE) {
+      if (chunk.type == IHDR_TYPE) {
+        new_chunks.push_back(chunk);
         continue;
       }
 
-      if (i->type == PLTE_TYPE && ihdr.color == 3) {
-        new_chunks.push_back(*i);
+      if (chunk.type == PLTE_TYPE && ihdr.color == 3) {
+        new_chunks.push_back(chunk);
         continue;
       }
 
-      j = find(strip_chunks.begin(), strip_chunks.end(), i->type);
+      auto i = find(strip_chunks.begin(), strip_chunks.end(), chunk.type);
 
-      if (j != strip_chunks.end()) {
+      if (i != strip_chunks.end()) {
         continue;
       }
 
       if (!strip_optional) {
-        recompress_optional_chunk(*i);
-        new_chunks.push_back(*i);
+        recompress_optional_chunk(chunk);
+        new_chunks.push_back(chunk);
         continue;
       }
 
-      if (i->type == tRNS_TYPE) {
-        new_chunks.push_back(*i);
+      if (chunk.type == tRNS_TYPE) {
+        new_chunks.push_back(chunk);
         continue;
       }
 
-      j = find(keep_chunks.begin(), keep_chunks.end(), i->type);
+      i = find(keep_chunks.begin(), keep_chunks.end(), chunk.type);
 
-      if (j != keep_chunks.end()) {
-        recompress_optional_chunk(*i);
-        new_chunks.push_back(*i);
+      if (i != keep_chunks.end()) {
+        recompress_optional_chunk(chunk);
+        new_chunks.push_back(chunk);
       }
 
       continue;
@@ -1677,7 +1669,7 @@ bool PngWolf::save_file() {
     update_chunk_crc(new_idat);
 
     new_chunks.push_back(new_idat);
-    new_chunks.push_back(*i);
+    new_chunks.push_back(chunk);
   }
 
   // TODO: it might be nice to not overwrite existing files, but
@@ -1692,10 +1684,10 @@ bool PngWolf::save_file() {
   if (fwrite(PNG_MAGIC, 8, 1, out) != 1) {
   }
 
-  for (i = new_chunks.begin(); i != new_chunks.end(); ++i) {
-    uint32_t size = htonl(i->size);
-    uint32_t type = htonl(i->type);
-    uint32_t crc32 = htonl(i->crc32);
+  for (const auto& chunk : new_chunks) {
+    uint32_t size = htonl(chunk.size);
+    uint32_t type = htonl(chunk.type);
+    uint32_t crc32 = htonl(chunk.crc32);
 
     // TODO: does this merit handling write errors?
 
@@ -1705,8 +1697,8 @@ bool PngWolf::save_file() {
     if (fwrite(&type, sizeof(type), 1, out) != 1) {
     }
 
-    if (i->data.size() > 0) {
-      if (fwrite(&i->data[0], i->data.size(), 1, out) != 1) {
+    if (chunk.data.size() > 0) {
+      if (fwrite(chunk.data.data(), chunk.data.size(), 1, out) != 1) {
       }
     }
 
