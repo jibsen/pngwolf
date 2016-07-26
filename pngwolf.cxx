@@ -92,7 +92,7 @@ struct IhdrChunk {
   uint32_t interlace;
 };
 
-typedef GA1DArrayAlleleGenome<PngFilter> PngFilterGenome;
+using PngFilterGenome = GA1DArrayAlleleGenome<PngFilter>;
 
 class Deflater {
 public:
@@ -116,10 +116,10 @@ public:
   // Urfilter
   std::vector<PngFilter> original_filters;
 
-  // Filters; TODO: who owns them?
-  std::map<std::string, PngFilterGenome*> genomes;
+  // Filters
+  std::map<std::string, std::unique_ptr<PngFilterGenome>> genomes;
 
-  std::vector<PngFilterGenome*> best_genomes;
+  std::vector<std::unique_ptr<PngFilterGenome>> best_genomes;
 
   // ...
   GAPopulation initial_pop;
@@ -130,8 +130,8 @@ public:
   unsigned max_evaluations;
   unsigned max_deflate;
   size_t population_size;
-  const char* in_path;
-  const char* out_path;
+  const char* in_path = nullptr;
+  const char* out_path = nullptr;
   bool verbose_analysis;
   bool verbose_summary;
   bool verbose_genomes;
@@ -192,13 +192,13 @@ public:
   std::vector<unsigned char> best_deflated;
 
   // The genetic algorithm
-  GAGeneticAlgorithm* ga;
+  GAGeneticAlgorithm* ga = nullptr;
 
   // Logging
   void log_analysis();
-  void log_critter(PngFilterGenome* curr_best);
+  void log_critter(const PngFilterGenome& curr_best);
   void log_summary();
-  void log_genome(PngFilterGenome* ge);
+  void log_genome(const PngFilterGenome& ge);
 
   // Various
   bool read_file();
@@ -802,11 +802,11 @@ void update_chunk_crc(PngChunk &chunk) {
 ////////////////////////////////////////////////////////////////////
 // Logging
 ////////////////////////////////////////////////////////////////////
-void PngWolf::log_genome(PngFilterGenome* ge) {
-  for (int gix = 0; gix < ge->size(); ++gix) {
+void PngWolf::log_genome(const PngFilterGenome& ge) {
+  for (int gix = 0; gix < ge.size(); ++gix) {
     if (gix % 72 == 0)
       fprintf(stdout, "\n    ");
-    fprintf(stdout, "%1d", ge->gene(gix));
+    fprintf(stdout, "%1d", ge.gene(gix));
   }
   fprintf(stdout, "\n");
 }
@@ -817,7 +817,7 @@ void PngWolf::log_summary() {
 
   if (verbose_summary) {
     fprintf(stdout, "best filter sequence found:");
-    log_genome(best_genomes.back());
+    log_genome(*best_genomes.back());
     fprintf(stdout, ""
       "best deflated idat size:      %0.0f\n"
       "total time spent optimizing:  %0.0f\n"
@@ -934,29 +934,29 @@ void PngWolf::log_analysis() {
     this->genomes["heuristic"]->score());
 
   fprintf(stdout, "original filters:");
-  log_genome(this->genomes["original"]);
+  log_genome(*this->genomes["original"]);
   fprintf(stdout, "basic heuristic filters:");
-  log_genome(this->genomes["heuristic"]);
+  log_genome(*this->genomes["heuristic"]);
   fprintf(stdout, "deflate scanline filters:");
-  log_genome(this->genomes["deflate scanline"]);
+  log_genome(*this->genomes["deflate scanline"]);
   fprintf(stdout, "distinct bytes filters:");
-  log_genome(this->genomes["distinct bytes"]);
+  log_genome(*this->genomes["distinct bytes"]);
   fprintf(stdout, "distinct bigrams filters:");
-  log_genome(this->genomes["distinct bigrams"]);
+  log_genome(*this->genomes["distinct bigrams"]);
   fprintf(stdout, "incremental filters:");
-  log_genome(this->genomes["incremental"]);
+  log_genome(*this->genomes["incremental"]);
 
   fflush(stdout);
 }
 
-void PngWolf::log_critter(PngFilterGenome* curr_best) {
-  PngFilterGenome* prev_best = best_genomes.back();
+void PngWolf::log_critter(const PngFilterGenome& curr_best) {
+  const PngFilterGenome& prev_best = *best_genomes.back();
 
   if (!this->verbose_genomes) {
     fprintf(stdout, ""
       "- deflated idat size: %7u # %+5d bytes %+4.0f seconds\n",
-      unsigned(curr_best->score()),
-      signed(curr_best->score() - initial_pop.best().score()),
+      unsigned(curr_best.score()),
+      signed(curr_best.score() - initial_pop.best().score()),
       difftime(time(NULL), program_begun_at));
     return;
   }
@@ -972,11 +972,11 @@ void PngWolf::log_critter(PngFilterGenome* curr_best) {
     "  current generation is the nth:             %u\n"
     "  number of genomes evaluated:               %u\n"
     "  best filters so far:",
-    unsigned(curr_best->score()),
-    signed(curr_best->score() - prev_best->score()),
+    unsigned(curr_best.score()),
+    signed(curr_best.score() - prev_best.score()),
     difftime(time(NULL), last_improvement_at),
-    signed(curr_best->score() - prev_best->score()),
-    signed(curr_best->score() - best_genomes.front()->score()),
+    signed(curr_best.score() - prev_best.score()),
+    signed(curr_best.score() - best_genomes.front()->score()),
     difftime(time(NULL), program_begun_at),
     difftime(time(NULL), last_improvement_at),
     nth_generation,
@@ -996,17 +996,17 @@ void PngWolf::init_filters() {
 
   // TODO: Can clone fail? What do we do then?
 
-  genomes["all set to avg"] = (PngFilterGenome*)ge.clone();
-  genomes["all set to none"] = (PngFilterGenome*)ge.clone();
-  genomes["all set to sub"] = (PngFilterGenome*)ge.clone();
-  genomes["all set to up"] = (PngFilterGenome*)ge.clone();
-  genomes["all set to paeth"] = (PngFilterGenome*)ge.clone();
-  genomes["original"] = (PngFilterGenome*)ge.clone();
-  genomes["heuristic"] = (PngFilterGenome*)ge.clone();
-  genomes["deflate scanline"] = (PngFilterGenome*)ge.clone();
-  genomes["distinct bytes"] = (PngFilterGenome*)ge.clone();
-  genomes["distinct bigrams"] = (PngFilterGenome*)ge.clone();
-  genomes["incremental"] = (PngFilterGenome*)ge.clone();
+  genomes["all set to avg"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["all set to none"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["all set to sub"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["all set to up"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["all set to paeth"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["original"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["heuristic"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["deflate scanline"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["distinct bytes"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["distinct bigrams"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
+  genomes["incremental"] = std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(ge.clone()));
 
   for (int i = 0; i < ge.size(); ++i) {
     genomes["original"]->gene(i, original_filters[i]);
@@ -1216,11 +1216,6 @@ void PngWolf::init_filters() {
   // in the initial population. For instance, improvements are hard to
   // find with some GAs if the heuristic filter selection is included.
 
-  // TODO: for now this uses copies but there is no deallocator for
-  // the originals, at some point I should figure out how to own the
-  // critters. Maybe the Wolf should have a second population that
-  // owns them, that way the default deallocator should handle them.
-
   for (auto&& genome : genomes)
     genome.second->evaluate();
 
@@ -1307,8 +1302,8 @@ void PngWolf::run() {
 
   ga.crossover(PngFilterGenome::TwoPointCrossover);
 
-  best_genomes.push_back((PngFilterGenome*)
-    ga.population().best().clone());
+  best_genomes.push_back(std::unique_ptr<PngFilterGenome>(
+    static_cast<PngFilterGenome*>(ga.population().best().clone())));
 
   fprintf(stdout, "---\n");
 
@@ -1352,13 +1347,14 @@ void PngWolf::run() {
       if (new_best.score() <= best_genomes.back()->score())
         continue;
 
-    log_critter(&new_best);
+    log_critter(new_best);
 
     last_improvement_at = time(NULL);
-    best_genomes.push_back((PngFilterGenome*)new_best.clone());
+    best_genomes.push_back(std::unique_ptr<PngFilterGenome>(static_cast<PngFilterGenome*>(new_best.clone())));
   }
 
 after_while:
+  this->ga = nullptr;
 
   // Since we intercept CTRL+C the user should get some feedback
   // on that as soon as possible, so the log header comes here.
@@ -1395,7 +1391,8 @@ void PngWolf::recompress() {
   // the command line part do logging and other things.
 
   if (best_deflated.size() > original_deflated.size() && !even_if_bigger) {
-    best_genomes.push_back(genomes["original"]);
+    best_genomes.push_back(std::unique_ptr<PngFilterGenome>(genomes["original"].release()));
+    genomes.erase("original");
     best_inflated = original_inflated;
     best_deflated = original_deflated;
   }
