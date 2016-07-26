@@ -37,6 +37,7 @@
 #include <iostream>
 #include <list>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <vector>
 
@@ -74,12 +75,6 @@ enum PngFilter {
   Paeth = 4
 };
 
-enum class Estimator {
-  libdeflate,
-  zlib,
-  zopfli,
-};
-
 struct PngChunk {
   uint32_t size;
   uint32_t type;
@@ -102,6 +97,8 @@ typedef GA1DArrayAlleleGenome<PngFilter> PngFilterGenome;
 class Deflater {
 public:
   virtual std::vector<unsigned char> deflate(const std::vector<unsigned char>&) = 0;
+  virtual bool parse_option(const std::string&) = 0;
+  virtual ~Deflater() {}
 };
 
 class PngWolf {
@@ -162,8 +159,8 @@ public:
   std::vector<uint32_t> keep_chunks;
 
   //
-  Deflater* deflate_fast;
-  Deflater* deflate_good;
+  std::unique_ptr<Deflater> deflate_estimator;
+  std::unique_ptr<Deflater> deflate_out;
 
   // User input
   bool should_abort;
@@ -181,7 +178,7 @@ public:
   std::vector<unsigned char> original_unfiltered;
 
   //
-  std::map<PngFilter, std::vector<unsigned char> > flt_singles;
+  std::map<PngFilter, std::vector<unsigned char>> flt_singles;
 
   //
   std::map<uint32_t, size_t> invis_colors;
@@ -217,8 +214,6 @@ public:
 
   // Constructor
   PngWolf() :
-    deflate_fast(NULL),
-    deflate_good(NULL),
     should_abort(false),
     done_deflating_at(0),
     nth_generation(0),
@@ -233,7 +228,7 @@ public:
 
 struct DeflateLibdeflate : public Deflater {
 public:
-  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) {
+  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) override {
     struct deflate_compressor *compressor = nullptr;
 
     compressor = deflate_alloc_compressor(z_level);
@@ -258,7 +253,26 @@ public:
     return new_deflated;
   }
 
-  DeflateLibdeflate(int level) :
+  bool parse_option(const std::string& opt) override {
+    auto i = opt.find('=');
+
+    if (i == std::string::npos) {
+      return false;
+    }
+
+    if (opt.compare(0, i, "level") == 0) {
+      int level = stoi(opt.substr(i + 1));
+
+      if (level >= 1 && level <= 12) {
+        z_level = level;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  DeflateLibdeflate(int level=5) :
     z_level(level) {
   }
 
@@ -268,7 +282,7 @@ private:
 
 struct DeflateZlib : public Deflater {
 public:
-  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) {
+  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) override {
     z_stream strm;
 
     strm.zalloc = Z_NULL;
@@ -301,7 +315,48 @@ public:
     return new_deflated;
   }
 
-  DeflateZlib(int level, int windowBits, int memLevel, int strategy) :
+  bool parse_option(const std::string& opt) override {
+    auto i = opt.find('=');
+
+    if (i == std::string::npos) {
+      return false;
+    }
+
+    if (opt.compare(0, i, "level") == 0) {
+      int level = stoi(opt.substr(i + 1));
+
+      if (level >= 0 && level <= 9) {
+        z_level = level;
+        return true;
+      }
+    } else if (opt.compare(0, i, "memlevel") == 0) {
+      int memlevel = stoi(opt.substr(i + 1));
+
+      if (memlevel >= 1 && memlevel <= 9) {
+        z_memLevel = memlevel;
+        return true;
+      }
+    } else if (opt.compare(0, i, "strategy") == 0) {
+      int strategy = stoi(opt.substr(i + 1));
+
+      if (strategy == Z_DEFAULT_STRATEGY || strategy == Z_FILTERED
+       || strategy == Z_HUFFMAN_ONLY || strategy == Z_RLE) {
+        z_strategy = strategy;
+        return true;
+      }
+    } else if (opt.compare(0, i, "window") == 0) {
+      int windowbits = stoi(opt.substr(i + 1));
+
+      if (windowbits >= 8 && windowbits <= 15) {
+        z_windowBits = windowbits;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  DeflateZlib(int level=5, int windowBits=15, int memLevel=8, int strategy=0) :
     z_level(level),
     z_windowBits(windowBits),
     z_memLevel(memLevel),
@@ -317,7 +372,7 @@ private:
 
 struct DeflateZopfli : public Deflater {
 public:
-  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) {
+  std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) override {
 
     ZopfliOptions zopt;
     unsigned char* pout = 0;
@@ -342,7 +397,31 @@ public:
     return deflated;
   }
 
-  DeflateZopfli(int iter, int maxsplit, bool verbose) :
+  bool parse_option(const std::string& opt) override {
+    auto i = opt.find('=');
+
+    if (i == std::string::npos) {
+      return false;
+    }
+
+    if (opt.compare(0, i, "iter") == 0) {
+      int iter = stoi(opt.substr(i + 1));
+
+      if (iter > 0) {
+        zop_iter = iter;
+        return true;
+      }
+    } else if (opt.compare(0, i, "maxsplit") == 0) {
+      int maxsplit = stoi(opt.substr(i + 1));
+
+      zop_maxsplit = maxsplit;
+      return true;
+    }
+
+    return false;
+  }
+
+  DeflateZopfli(int iter=15, int maxsplit=15, bool verbose=false) :
     zop_iter(iter),
     zop_maxsplit(maxsplit),
     zop_verbose(verbose) {
@@ -694,7 +773,7 @@ float Evaluator(GAGenome& genome) {
       &wolf.flt_singles[ge.gene(row)][pos], wolf.scanline_width);
   }
 
-  std::vector<unsigned char> deflated = wolf.deflate_fast->deflate(filtered);
+  std::vector<unsigned char> deflated = wolf.deflate_estimator->deflate(filtered);
 
   return float(deflated.size());
 }
@@ -1008,7 +1087,7 @@ void PngWolf::init_filters() {
         flt_singles[fi.first].begin() + row * scanline_width;
 
       std::vector<unsigned char> line(scanline, scanline + scanline_width);
-      size_t sum = deflate_fast->deflate(line).size();
+      size_t sum = deflate_estimator->deflate(line).size();
 
       if (sum >= best_sum)
         continue;
@@ -1289,7 +1368,7 @@ after_while:
 
 void PngWolf::recompress() {
   best_inflated = refilter(*best_genomes.back());
-  best_deflated = deflate_good->deflate(best_inflated);
+  best_deflated = deflate_out->deflate(best_inflated);
 
   // In my test sample in 1.66% of cases, using a high zlib level,
   // zlib is able to produce smaller output than Zopfli. So for the
@@ -1303,7 +1382,7 @@ void PngWolf::recompress() {
   // what compressor was used and give the respective sizes.
 
   if (best_deflated.size() > best_genomes.back()->score()) {
-    best_deflated = deflate_fast->deflate(best_inflated);
+    best_deflated = deflate_estimator->deflate(best_inflated);
   }
 
   // TODO: Doing this here is a bit of an hack, and doing it
@@ -1591,7 +1670,7 @@ bool PngWolf::recompress_optional_chunk(PngChunk &chunk) {
 
     std::vector<unsigned char> inflated_data(inflate_zlib(original_deflated));
 
-    std::vector<unsigned char> deflated_data(deflate_good->deflate(inflated_data));
+    std::vector<unsigned char> deflated_data(deflate_out->deflate(inflated_data));
 
     if (deflated_data.size() < original_deflated.size()) {
       chunk.data.erase(i, chunk.data.end());
@@ -1712,6 +1791,58 @@ bool PngWolf::save_file() {
   return false;
 }
 
+std::vector<std::string> split_string(const std::string& s, const std::string& delims, bool include_empty=true) {
+  std::vector<std::string> tokens;
+  std::string::size_type left = 0;
+
+  for (;;) {
+    auto right = s.find_first_of(delims, left);
+
+    auto token = s.substr(left, right - left);
+    if (include_empty || !token.empty()) {
+      tokens.push_back(token);
+    }
+
+    if (right == std::string::npos) {
+      break;
+    }
+
+    left = ++right;
+  }
+
+  return tokens;
+}
+
+std::unique_ptr<Deflater> get_deflater_from_option(const std::string& s) {
+  std::unique_ptr<Deflater> res;
+
+  auto i = s.find(',');
+
+  if (s.compare(0, i, "libdeflate") == 0) {
+    res = std::make_unique<DeflateLibdeflate>();
+  } else if (s.compare(0, i, "zlib") == 0) {
+    res = std::make_unique<DeflateZlib>();
+  } else if (s.compare(0, i, "zopfli") == 0) {
+    res = std::make_unique<DeflateZopfli>();
+  } else {
+    fprintf(stderr, "pngwolf: unknown deflater '%s'\n", s.substr(0, i).c_str());
+    return nullptr;
+  }
+
+  if (i == std::string::npos) {
+    return res;
+  }
+
+  for (const auto& option : split_string(std::string(s, i + 1), ",")) {
+    if (!res->parse_option(option)) {
+      fprintf(stderr, "pngwolf: %s option error at '%s'\n", s.substr(0, i).c_str(), option.c_str());
+      return nullptr;
+    }
+  }
+
+  return res;
+}
+
 ////////////////////////////////////////////////////////////////////
 // Help!
 ////////////////////////////////////////////////////////////////////
@@ -1724,6 +1855,10 @@ void show_help(void) {
     "  --out=<path.png>               The PNG output file (defaults to not saving!)\n"
     "  --original-idat-to=<path.gz>   Save original IDAT data in a gzip container  \n"
     "  --best-idat-to=<path.gz>       Save best IDAT data in a gzip container      \n"
+    "  --out-deflate=<name[,opt..]>   Lib for output (libdeflate, zlib, zopfli)    \n"
+    "                                                                              \n"
+    "Evaluation options:                                                           \n"
+    "  --estimator=<name[,opt..]>     Lib for estimator (libdeflate, zlib, zopfli) \n"
     "  --exclude-singles              Exclude single-filter genomes from population\n"
     "  --exclude-original             Exclude the filters of the input image       \n"
     "  --exclude-heuristic            Exclude the heuristically generated filters  \n"
@@ -1733,29 +1868,36 @@ void show_help(void) {
     "  --max-stagnate-time=<seconds>  Give up if no improvement is found (d: 5)    \n"
     "  --max-deflate=<megabytes>      Give up after deflating this many megabytes  \n"
     "  --max-evaluations=<int>        Give up after evaluating this many genomes   \n"
-    "  --estimator=<name>             Estimator (libdeflate, zlib, zopfli)         \n"
-    "  --libdeflate-level=<int>       libdeflate compression level (default: 5)    \n"
-    "  --zlib-level=<int>             zlib compression level (default: 5)          \n"
-    "  --zlib-strategy=<int>          zlib strategy (default: 0)                   \n"
-    "  --zlib-window=<int>            zlib window bits (default: 15)               \n"
-    "  --zlib-memlevel=<int>          zlib memory level (default: 8)               \n"
-    "  --zopfli-iter=<int>            Zopfli iterations (default: 15)              \n"
-    "  --zopfli-splitlast             (Deprecated)                                 \n"
-    "  --zopfli-maxsplit=<int>        Zopfli max blocks to split into (default: 15)\n"
+    "                                                                              \n"
+    "Verbosity options:                                                            \n"
     "  --verbose-analysis             More details in initial image analysis       \n"
-    "  --verbose-summary              More details in optimization summary         \n"
     "  --verbose-genomes              More details when improvements are found     \n"
+    "  --verbose-summary              More details in optimization summary         \n"
     "  --verbose-zopfli               More details from Zopfli                     \n"
     "  --verbose                      Shorthand for all verbosity options          \n"
+    "                                                                              \n"
+    "PNG options:                                                                  \n"
     "  --normalize-alpha              For RGBA, make fully transparent pixels black\n"
+    "  --keep-chunk=<name>            Keep chunks matching name (4 chars)          \n"
     "  --strip-chunk=<name>           Strip chunks matching name (4 chars)         \n"
     "  --strip-optional               Strip all optional chunks except tRNS        \n"
-    "  --keep-chunk=<name>            Keep chunks matching name (4 chars)          \n"
+    "                                                                              \n"
+    "Misc options:                                                                 \n"
     "  --even-if-bigger               Otherwise the original is copied if it's best\n"
     "  --bigger-is-better             Find filter sequences that compress worse    \n"
     "  --info                         Just print out verbose analysis and exit     \n"
-    "  --version                      Print version number and exit                \n"
     "  --help                         Print this help page and exit                \n"
+    "  --version                      Print version number and exit                \n"
+    "                                                                              \n"
+    "The names of the estimator and output deflate libraries can optionally be     \n"
+    "followed by comma-separated options. These options are:                       \n"
+    "  libdeflate:  level=<int>     compresison level (1-12, default: 5)           \n"
+    "  zlib:        level=<int>     compresison level (0-9, default: 5)            \n"
+    "               strategy=<int>  strategy (0-3, default: 0)                     \n"
+    "               window=<int>    window bits (8-15, default: 15)                \n"
+    "               memlevel=<int>  memory level (1-9, default: 8)                 \n"
+    "  zopfli:      iter=<int>      iteratons (default: 15)                        \n"
+    "               maxsplit=<int>  max blocks to split into (default: 15)         \n"
     " -----------------------------------------------------------------------------\n"
     " To reduce the file size of PNG images `pngwolf` uses a genetic algorithm for \n"
     " finding the best scanline filter for each scanline in the image. It does not \n"
@@ -1801,7 +1943,6 @@ void show_version(void) {
 ////////////////////////////////////////////////////////////////////
 int main(int argc, char* argv[]) {
 
-  bool argHelp = false;
   bool argVerboseAnalysis = false;
   bool argVerboseSummary = false;
   bool argVerboseGenomes = false;
@@ -1827,7 +1968,8 @@ int main(int argc, char* argv[]) {
   int argMaxEvaluations = 0;
   int argMaxDeflate = 0;
   int argPopulationSize = 19;
-  Estimator argEstimator = Estimator::libdeflate;
+  std::unique_ptr<Deflater> argOutDeflate;
+  std::unique_ptr<Deflater> argEstimator;
   int argLibdeflateLevel = 5;
   int argZlibLevel = 5;
   int argZlibStrategy = 0;
@@ -1838,9 +1980,6 @@ int main(int argc, char* argv[]) {
   std::vector<uint32_t> argStripChunks;
   bool argStripOptional = false;
   std::vector<uint32_t> argKeepChunks;
-  bool argVersion = false;
-
-  bool argOkay = true;;
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
   sig_t old_handler;
@@ -1855,8 +1994,8 @@ int main(int argc, char* argv[]) {
 
     // boolean options
     if (strcmp("--help", s) == 0) {
-      argHelp = 1;
-      break;
+      show_help();
+      return EXIT_SUCCESS;
 
     } else if (strcmp("--verbose-analysis", s) == 0) {
       argVerboseAnalysis = true;
@@ -1917,25 +2056,21 @@ int main(int argc, char* argv[]) {
       argExcludeExperiment4 = true;
       continue;
 
-    } else if (strcmp("--zopfli-splitlast", s) == 0) {
-      fprintf(stdout, "# Warning: --zopfli-splitlast is deprecated\n");
-      continue;
-
     } else if (strcmp("--strip-optional", s) == 0) {
       argStripOptional = true;
       continue;
 
     } else if (strcmp("--version", s) == 0) {
-      argVersion = true;
-      break;
+      show_version();
+      return EXIT_SUCCESS;
 
     }
 
     value = strchr(s, '=');
 
     if (value == NULL) {
-      argOkay = false;
-      break;
+      fprintf(stderr, "pngwolf: option error '%s'", s);
+      return EXIT_FAILURE;
     }
 
     nlen = value++ - s;
@@ -1953,6 +2088,18 @@ int main(int argc, char* argv[]) {
     } else if (strncmp("--original-idat-to", s, nlen) == 0) {
       argOriginalIdatTo = value;
 
+    } else if (strncmp("--out-deflate", s, nlen) == 0) {
+      argOutDeflate = get_deflater_from_option(value);
+      if (argOutDeflate == nullptr) {
+        return EXIT_FAILURE;
+      }
+
+    } else if (strncmp("--estimator", s, nlen) == 0) {
+      argEstimator = get_deflater_from_option(value);
+      if (argEstimator == nullptr) {
+        return EXIT_FAILURE;
+      }
+
     } else if (strncmp("--max-time", s, nlen) == 0) {
       argMaxTime = atoi(value);
 
@@ -1968,103 +2115,44 @@ int main(int argc, char* argv[]) {
     } else if (strncmp("--population-size", s, nlen) == 0) {
       argPopulationSize = atoi(value);
 
-    } else if (strncmp("--estimator", s, nlen) == 0) {
-      if (strcmp("libdeflate", value) == 0) {
-        argEstimator = Estimator::libdeflate;
-      } else if (strcmp("zlib", value) == 0) {
-        argEstimator = Estimator::zlib;
-      } else if (strcmp("zopfli", value) == 0) {
-        argEstimator = Estimator::zopfli;
-      } else {
-        argOkay = 0;
-      }
-
-    } else if (strncmp("--libdeflate-level", s, nlen) == 0) {
-      argLibdeflateLevel = atoi(value);
-      argOkay &= argLibdeflateLevel >= 1;
-      argOkay &= argLibdeflateLevel <= 12;
-
-    } else if (strncmp("--zlib-level", s, nlen) == 0) {
-      argZlibLevel = atoi(value);
-      argOkay &= argZlibLevel >= 0;
-      argOkay &= argZlibLevel <= 9;
-
-    } else if (strncmp("--zlib-memlevel", s, nlen) == 0) {
-      argZlibMemlevel = atoi(value);
-      argOkay &= argZlibMemlevel >= 1;
-      argOkay &= argZlibMemlevel <= 9;
-
-    } else if (strncmp("--zlib-window", s, nlen) == 0) {
-      argZlibWindow = atoi(value);
-      argOkay &= argZlibWindow >= 8;
-      argOkay &= argZlibWindow <= 15;
-
-    } else if (strncmp("--zlib-strategy", s, nlen) == 0) {
-      argZlibStrategy = atoi(value);
-      argOkay &= argZlibStrategy == Z_DEFAULT_STRATEGY
-              || argZlibStrategy == Z_FILTERED
-              || argZlibStrategy == Z_HUFFMAN_ONLY
-              || argZlibStrategy == Z_RLE;
-
-    } else if (strncmp("--zopfli-iter", s, nlen) == 0) {
-      argZopfliIter = atoi(value);
-      argOkay &= argZopfliIter > 0;
-
-    } else if (strncmp("--zopfli-maxsplit", s, nlen) == 0) {
-      argZopfliMaxSplit = atoi(value);
-
     } else if (strncmp("--strip-chunk", s, nlen) == 0) {
       if (strlen(value) == 4) {
         argStripChunks.push_back(ntohl(*(uint32_t *)value));
       } else {
-        argOkay = 0;
+        fprintf(stderr, "pngwolf: invalid chunk name '%s'\n", value);
+        return EXIT_FAILURE;
       }
 
     } else if (strncmp("--keep-chunk", s, nlen) == 0) {
       if (strlen(value) == 4) {
         argKeepChunks.push_back(ntohl(*(uint32_t *)value));
       } else {
-        argOkay = 0;
+        fprintf(stderr, "pngwolf: invalid chunk name '%s'\n", value);
+        return EXIT_FAILURE;
       }
 
     } else {
-      // TODO: error
-      argHelp = 1;
+      fprintf(stderr, "pngwolf: unknown option '%s'", s);
+      return EXIT_FAILURE;
     }
   }
 
-  if (argVersion) {
-    show_version();
-    return EXIT_SUCCESS;
-  }
-
-  if (argHelp) {
-    show_help();
-    return EXIT_SUCCESS;
-  }
-
-  if (argPng == NULL || !argOkay) {
-    show_help();
+  if (argPng == NULL) {
+    fprintf(stderr, "pngwolf: missing input file\n"
+                    "Try `pngwolf --help` for more information.\n");
     return EXIT_FAILURE;
   }
 
-  DeflateLibdeflate libdeflate_deflater(argLibdeflateLevel);
-  DeflateZlib zlib_deflater(argZlibLevel, argZlibWindow, argZlibMemlevel, argZlibStrategy);
-  DeflateZopfli zopfli_deflater(argZopfliIter, argZopfliMaxSplit, argVerboseZopfli);
-
-  switch (argEstimator) {
-  case Estimator::zlib:
-    wolf.deflate_fast = &zlib_deflater;
-    break;
-  case Estimator::zopfli:
-    wolf.deflate_fast = &zopfli_deflater;
-    break;
-  default:
-    wolf.deflate_fast = &libdeflate_deflater;
-    break;
+  if (argEstimator == nullptr) {
+    argEstimator = std::make_unique<DeflateLibdeflate>(2);
   }
 
-  wolf.deflate_good = &zopfli_deflater;
+  if (argOutDeflate == nullptr) {
+    argOutDeflate = std::make_unique<DeflateZopfli>(15, 15, argVerboseZopfli);
+  }
+
+  wolf.deflate_estimator = std::move(argEstimator);
+  wolf.deflate_out = std::move(argOutDeflate);
   wolf.libdeflate_level = argLibdeflateLevel;
   wolf.zlib_level = argZlibLevel;
   wolf.zlib_memLevel = argZlibMemlevel;
@@ -2103,8 +2191,9 @@ int main(int argc, char* argv[]) {
 
   // TODO: ...
   try {
-  if (wolf.read_file())
-    goto error;
+    if (wolf.read_file()) {
+      goto error;
+    }
   } catch (...) {
     goto error;
   }
@@ -2154,20 +2243,19 @@ int main(int argc, char* argv[]) {
   wolf.log_summary();
 
 done:
-
   return EXIT_SUCCESS;
 
 error:
   if (wolf.ihdr.interlace) {
-    fprintf(stderr, "Interlaced images are not supported\n");
+    fprintf(stderr, "pngwolf: interlaced images are not supported\n");
     return EXIT_FAILURE;
   }
 
-  fprintf(stderr, "Some error occured while reading the input file\n");
+  fprintf(stderr, "pngwolf: an error occured while reading the input file\n");
   return EXIT_FAILURE;
 
 out_error:
-  fprintf(stderr, "Some error occured while writing an output file\n");
+  fprintf(stderr, "pngwolf: an error occured while writing an output file\n");
   return EXIT_FAILURE;
 
 }
