@@ -135,7 +135,6 @@ public:
   bool verbose_analysis;
   bool verbose_summary;
   bool verbose_genomes;
-  bool verbose_zopfli;
   bool exclude_singles;
   bool exclude_original;
   bool exclude_heuristic;
@@ -147,13 +146,7 @@ public:
   bool even_if_bigger;
   bool auto_mpass;
   bool bigger_is_better;
-  int libdeflate_level;
   int zlib_level;
-  int zlib_windowBits;
-  int zlib_memLevel;
-  int zlib_strategy;
-  int zop_iter;
-  int zop_maxsplit;
   std::vector<uint32_t> strip_chunks;
   bool strip_optional;
   std::vector<uint32_t> keep_chunks;
@@ -272,7 +265,7 @@ public:
     return false;
   }
 
-  DeflateLibdeflate(int level=5) :
+  DeflateLibdeflate(int level=4) :
     z_level(level) {
   }
 
@@ -356,7 +349,7 @@ public:
     return false;
   }
 
-  DeflateZlib(int level=5, int windowBits=15, int memLevel=8, int strategy=0) :
+  DeflateZlib(int level=3, int windowBits=15, int memLevel=8, int strategy=0) :
     z_level(level),
     z_windowBits(windowBits),
     z_memLevel(memLevel),
@@ -380,7 +373,8 @@ public:
 
     ZopfliInitOptions(&zopt);
 
-    zopt.verbose = zop_verbose;
+    zopt.verbose = zop_verbose > 0;
+    zopt.verbose_more = zop_verbose > 1;
     zopt.numiterations = zop_iter;
     zopt.blocksplittingmax = zop_maxsplit;
 
@@ -414,14 +408,23 @@ public:
     } else if (opt.compare(0, i, "maxsplit") == 0) {
       int maxsplit = stoi(opt.substr(i + 1));
 
-      zop_maxsplit = maxsplit;
-      return true;
+      if (maxsplit >= 0) {
+        zop_maxsplit = maxsplit;
+        return true;
+      }
+    } else if (opt.compare(0, i, "verbose") == 0) {
+      int verbose = stoi(opt.substr(i + 1));
+
+      if (verbose >= 0 && verbose <= 2) {
+        zop_verbose = verbose;
+        return true;
+      }
     }
 
     return false;
   }
 
-  DeflateZopfli(int iter=15, int maxsplit=15, bool verbose=false) :
+  DeflateZopfli(int iter=15, int maxsplit=15, int verbose=0) :
     zop_iter(iter),
     zop_maxsplit(maxsplit),
     zop_verbose(verbose) {
@@ -430,7 +433,7 @@ public:
 private:
   int zop_iter;
   int zop_maxsplit;
-  bool zop_verbose;
+  int zop_verbose;
 };
 
 static const char PNG_MAGIC[] = "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A";
@@ -1156,9 +1159,7 @@ void PngWolf::init_filters() {
   strm.zfree = Z_NULL;
   strm.opaque = Z_NULL;
 
-  if (deflateInit2(&strm, zlib_level, Z_DEFLATED,
-    zlib_windowBits, zlib_memLevel,
-    zlib_strategy) != Z_OK) {
+  if (deflateInit(&strm, wolf.zlib_level) != Z_OK) {
     abort();
   }
 
@@ -1573,22 +1574,9 @@ bool PngWolf::read_file() {
     }
   }
 
-  // For very large images the highest Zopfli setting requires too
-  // much time to be worth the saved bytes, especially as `pngout`
-  // performs better for such images, at least if they are highly
-  // redundant, anyway, so this option allows picking the highest
-  // setting for small images while not requiring users to wait a
-  // very long time for the compressed result. TODO: maybe the
-  // base value should configurable.
-  if (auto_mpass) {
-    double times = double(original_inflated.size()) / (64*1024.f);
-    zop_iter = 16 - std::max(1, int(floor(times)));
-  }
-
   return false;
 
 error:
-
   return true;
 }
 
@@ -1865,19 +1853,19 @@ void show_help(void) {
     "  --max-stagnate-time=<seconds>  Give up if no improvement is found (d: 5)    \n"
     "  --max-deflate=<megabytes>      Give up after deflating this many megabytes  \n"
     "  --max-evaluations=<int>        Give up after evaluating this many genomes   \n"
-    "                                                                              \n"
-    "Verbosity options:                                                            \n"
-    "  --verbose-analysis             More details in initial image analysis       \n"
-    "  --verbose-genomes              More details when improvements are found     \n"
-    "  --verbose-summary              More details in optimization summary         \n"
-    "  --verbose-zopfli               More details from Zopfli                     \n"
-    "  --verbose                      Shorthand for all verbosity options          \n"
+    "  --zlib-level=<int>             Compression level for inc. heuristic (d: 7)  \n"
     "                                                                              \n"
     "PNG options:                                                                  \n"
     "  --normalize-alpha              For RGBA, make fully transparent pixels black\n"
     "  --keep-chunk=<name>            Keep chunks matching name (4 chars)          \n"
     "  --strip-chunk=<name>           Strip chunks matching name (4 chars)         \n"
     "  --strip-optional               Strip all optional chunks except tRNS        \n"
+    "                                                                              \n"
+    "Verbosity options:                                                            \n"
+    "  --verbose-analysis             More details in initial image analysis       \n"
+    "  --verbose-genomes              More details when improvements are found     \n"
+    "  --verbose-summary              More details in optimization summary         \n"
+    "  --verbose                      Shorthand for all verbosity options above    \n"
     "                                                                              \n"
     "Misc options:                                                                 \n"
     "  --even-if-bigger               Otherwise the original is copied if it's best\n"
@@ -1888,13 +1876,14 @@ void show_help(void) {
     "                                                                              \n"
     "The names of the estimator and output deflate libraries can optionally be     \n"
     "followed by comma-separated options. These options are:                       \n"
-    "  libdeflate:  level=<int>     compresison level (1-12, default: 5)           \n"
-    "  zlib:        level=<int>     compresison level (0-9, default: 5)            \n"
-    "               strategy=<int>  strategy (0-3, default: 0)                     \n"
-    "               window=<int>    window bits (8-15, default: 15)                \n"
-    "               memlevel=<int>  memory level (1-9, default: 8)                 \n"
-    "  zopfli:      iter=<int>      iteratons (default: 15)                        \n"
-    "               maxsplit=<int>  max blocks to split into (default: 15)         \n"
+    "  libdeflate:  level=<int>       Compresison level (1-12, default: 4)         \n"
+    "  zlib:        level=<int>       Compresison level (0-9, default: 3)          \n"
+    "               strategy=<int>    Strategy (0-3, default: 0)                   \n"
+    "               window=<int>      Window bits (8-15, default: 15)              \n"
+    "               memlevel=<int>    Memory level (1-9, default: 8)               \n"
+    "  zopfli:      iter=<int>        Iteratons (default: 15)                      \n"
+    "               maxsplit=<int>    Max blocks to split into (0=inf, default: 15)\n"
+    "               verbose=<int>     Zopfli verbosity level (0-2, default: 0)     \n"
     " -----------------------------------------------------------------------------\n"
     " To reduce the file size of PNG images `pngwolf` uses a genetic algorithm for \n"
     " finding the best scanline filter for each scanline in the image. It does not \n"
@@ -1943,7 +1932,6 @@ int main(int argc, char* argv[]) {
   bool argVerboseAnalysis = false;
   bool argVerboseSummary = false;
   bool argVerboseGenomes = false;
-  bool argVerboseZopfli = false;
   bool argExcludeSingles = false;
   bool argExcludeOriginal = false;
   bool argExcludeHeuristic = false;
@@ -1967,13 +1955,7 @@ int main(int argc, char* argv[]) {
   int argPopulationSize = 19;
   std::unique_ptr<Deflater> argOutDeflate;
   std::unique_ptr<Deflater> argEstimator;
-  int argLibdeflateLevel = 5;
-  int argZlibLevel = 5;
-  int argZlibStrategy = 0;
-  int argZlibMemlevel = 8;
-  int argZlibWindow = 15;
-  int argZopfliIter = 15;
-  int argZopfliMaxSplit = 15;
+  int argZlibLevel = 7;
   std::vector<uint32_t> argStripChunks;
   bool argStripOptional = false;
   std::vector<uint32_t> argKeepChunks;
@@ -2006,10 +1988,6 @@ int main(int argc, char* argv[]) {
       argVerboseGenomes = true;
       continue;
 
-    } else if (strcmp("--verbose-zopfli", s) == 0) {
-      argVerboseZopfli = true;
-      continue;
-
     } else if (strcmp("--exclude-original", s) == 0) {
       argExcludeOriginal = true;
       continue;
@@ -2026,7 +2004,6 @@ int main(int argc, char* argv[]) {
       argVerboseAnalysis = true;
       argVerboseSummary = true;
       argVerboseGenomes = true;
-      argVerboseZopfli = true;
       continue;
 
     } else if (strcmp("--info", s) == 0) {
@@ -2112,6 +2089,14 @@ int main(int argc, char* argv[]) {
     } else if (strncmp("--population-size", s, nlen) == 0) {
       argPopulationSize = atoi(value);
 
+    } else if (strncmp("--zlib-level", s, nlen) == 0) {
+      argZlibLevel = atoi(value);
+
+      if (argZlibLevel < 0 || argZlibLevel > 9) {
+        fprintf(stderr, "pngwolf: invalid zlib level %d\n", argZlibLevel);
+        return EXIT_FAILURE;
+      }
+
     } else if (strncmp("--strip-chunk", s, nlen) == 0) {
       if (strlen(value) == 4) {
         argStripChunks.push_back(ntohl(*(uint32_t *)value));
@@ -2141,27 +2126,22 @@ int main(int argc, char* argv[]) {
   }
 
   if (argEstimator == nullptr) {
-    argEstimator = std::make_unique<DeflateLibdeflate>(2);
+    argEstimator = std::make_unique<DeflateLibdeflate>();
   }
 
   if (argOutDeflate == nullptr) {
-    argOutDeflate = std::make_unique<DeflateZopfli>(15, 15, argVerboseZopfli);
+    argOutDeflate = std::make_unique<DeflateZopfli>();
   }
 
   wolf.deflate_estimator = std::move(argEstimator);
   wolf.deflate_out = std::move(argOutDeflate);
-  wolf.libdeflate_level = argLibdeflateLevel;
   wolf.zlib_level = argZlibLevel;
-  wolf.zlib_memLevel = argZlibMemlevel;
-  wolf.zlib_strategy = argZlibStrategy;
-  wolf.zlib_windowBits = argZlibWindow;
   wolf.in_path = argPng;
   wolf.max_deflate = argMaxDeflate;
   wolf.max_evaluations = argMaxEvaluations;
   wolf.verbose_analysis = argVerboseAnalysis;
   wolf.verbose_genomes = argVerboseGenomes;
   wolf.verbose_summary = argVerboseSummary;
-  wolf.verbose_zopfli = argVerboseZopfli;
   wolf.exclude_heuristic = argExcludeHeuristic;
   wolf.exclude_original = argExcludeOriginal;
   wolf.exclude_singles = argExcludeSingles;
@@ -2180,8 +2160,6 @@ int main(int argc, char* argv[]) {
   wolf.even_if_bigger = argEvenIfBigger;
   wolf.auto_mpass = argAutoMpass;
   wolf.bigger_is_better = argBiggerIsBetter;
-  wolf.zop_iter = argZopfliIter;
-  wolf.zop_maxsplit = argZopfliMaxSplit;
   wolf.strip_chunks = argStripChunks;
   wolf.strip_optional = argStripOptional;
   wolf.keep_chunks = argKeepChunks;
