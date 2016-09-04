@@ -222,20 +222,20 @@ public:
 struct DeflateLibdeflate : public Deflater {
 public:
   std::vector<unsigned char> deflate(const std::vector<unsigned char>& inflated) override {
-    struct deflate_compressor *compressor = nullptr;
+    struct libdeflate_compressor *compressor = nullptr;
 
-    compressor = deflate_alloc_compressor(z_level);
+    compressor = libdeflate_alloc_compressor(z_level);
 
     if (compressor == nullptr)
       abort();
 
-    const size_t maxsize = zlib_compress_bound(compressor, inflated.size());
+    const size_t maxsize = libdeflate_zlib_compress_bound(compressor, inflated.size());
     std::vector<unsigned char> new_deflated(maxsize);
 
-    size_t res = zlib_compress(compressor, inflated.data(), inflated.size(),
+    size_t res = libdeflate_zlib_compress(compressor, inflated.data(), inflated.size(),
                                new_deflated.data(), new_deflated.size());
 
-    deflate_free_compressor(compressor);
+    libdeflate_free_compressor(compressor);
 
     // TODO: aborting here probably leaks memory
     if (res == 0)
