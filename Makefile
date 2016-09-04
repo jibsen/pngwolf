@@ -8,8 +8,8 @@
 
 .PHONY: clean all
 
-CFLAGS = -std=c99 -Wall -march=native -O2 -flto -fopenmp
-CXXFLAGS = -std=c++14 -Wall -march=native -O2 -flto -fopenmp
+CFLAGS = -std=c99 -Wall -msse2 -mfpmath=sse -O3 -flto -fopenmp
+CXXFLAGS = -std=c++14 -Wall -msse2 -mfpmath=sse -O3 -flto -fopenmp
 CPPFLAGS = -DNDEBUG -DZLIB_CONST -Igalib -Ilibdeflate -Izlib -Izopfli/src/zopfli
 
 ifeq ($(OS),Windows_NT)
