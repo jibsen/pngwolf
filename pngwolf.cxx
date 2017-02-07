@@ -5,7 +5,7 @@
 // Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 //
 // Modified to use Zopfli for the final compression step
-// Copyright (C) 2015-2016 Joergen Ibsen
+// Copyright (C) 2015-2017 Joergen Ibsen
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -62,7 +62,7 @@
 #pragma warning(disable: 4100)
 #endif
 
-#define PNGWOLF_VERSION "1.1.1"
+#define PNGWOLF_VERSION "1.1.2"
 
 ////////////////////////////////////////////////////////////////////
 // Miscellaneous structures and types
@@ -1917,7 +1917,7 @@ void show_version(void) {
     "Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>\n"
     "\n"
     "Modified to use Zopfli for the final compression step\n"
-    "Copyright (C) 2015-2016 Joergen Ibsen\n"
+    "Copyright (C) 2015-2017 Joergen Ibsen\n"
     "\n"
     "This is free software; see the source for copying conditions.\n"
     "There is NO WARRANTY, to the extent permitted by law.\n"
