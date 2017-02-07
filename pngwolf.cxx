@@ -288,7 +288,7 @@ public:
       abort();
     }
 
-    strm.next_in = inflated.data();
+    strm.next_in = const_cast<unsigned char*>(inflated.data());
     strm.avail_in = inflated.size();
 
     size_t max = deflateBound(&strm, inflated.size());
