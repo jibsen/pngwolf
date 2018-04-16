@@ -29,7 +29,7 @@ objs_galib = galib/ga/GA1DArrayGenome.o galib/ga/GAAllele.o \
   galib/ga/GASelector.o galib/ga/GAStatistics.o
 
 objs_libdeflate = libdeflate/lib/adler32.o libdeflate/lib/aligned_malloc.o \
-  libdeflate/lib/deflate_compress.o libdeflate/lib/x86_cpu_features.o \
+  libdeflate/lib/deflate_compress.o libdeflate/lib/x86/cpu_features.o \
   libdeflate/lib/zlib_compress.o
 
 objs_zlib = zlib/adler32.o zlib/crc32.o zlib/deflate.o zlib/compress.o \
