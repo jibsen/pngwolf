@@ -38,7 +38,7 @@ add_executable(pngwolf
   libdeflate/lib/adler32.c
   libdeflate/lib/aligned_malloc.c
   libdeflate/lib/deflate_compress.c
-  libdeflate/lib/x86_cpu_features.c
+  libdeflate/lib/x86/cpu_features.c
   libdeflate/lib/zlib_compress.c
   zlib/adler32.c
   zlib/compress.c
