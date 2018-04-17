@@ -1,27 +1,21 @@
 language: cpp
+dist: trusty
 sudo: false
 
 matrix:
   include:
     - os: linux
-      env: C_COMPILER=gcc-6 CXX_COMPILER=g++-6
+      env: C_COMPILER=gcc-7 CXX_COMPILER=g++-7
       addons:
         apt:
           sources:
           - ubuntu-toolchain-r-test
           packages:
-          - gcc-6
-          - g++-6
+          - gcc-7
+          - g++-7
 
     - os: linux
-      env: C_COMPILER=clang-3.8 CXX_COMPILER=clang++-3.8
-      addons:
-        apt:
-          sources:
-          - llvm-toolchain-precise-3.8
-          - ubuntu-toolchain-r-test
-          packages:
-          - clang-3.8
+      compiler: clang
 
 install:
   - git submodule -q update --init --recursive
