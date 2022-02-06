@@ -1,24 +1,14 @@
-cmake_minimum_required(VERSION 2.8.6)
+cmake_minimum_required(VERSION 3.16)
 
 project(pngwolf)
 
 find_package(OpenMP)
-if(OPENMP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
-
-add_definitions(-DZLIB_CONST)
 
 if(MSVC)
-  add_definitions(/D_CRT_SECURE_NO_WARNINGS)
-elseif(CMAKE_COMPILER_IS_GNUCXX)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -stdlib=libc++")
+  add_compile_options(/W3)
+else()
+  add_compile_options(-Wall -Wextra -pedantic)
 endif()
-
-include_directories(galib libdeflate libdeflate/common zlib zopfli/src/zopfli)
 
 add_executable(pngwolf
   pngwolf.cxx
@@ -65,6 +55,25 @@ add_executable(pngwolf
   zopfli/src/zopfli/zopfli_lib.c
 )
 
-if(WIN32)
-  target_link_libraries(pngwolf ws2_32)
+set_target_properties(pngwolf PROPERTIES
+  CXX_STANDARD 14
+  C_STANDARD 99
+)
+
+target_include_directories(pngwolf
+  PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/galib>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/libdeflate>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/libdeflate/common>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/zlib>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/zopfli/src/zopfli>
+)
+
+if(MSVC)
+  target_compile_definitions(pngwolf PRIVATE _CRT_SECURE_NO_WARNINGS ZLIB_CONST)
+  target_link_libraries(pngwolf PRIVATE ws2_32)
+endif()
+
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(pngwolf PRIVATE OpenMP::OpenMP_CXX)
 endif()
