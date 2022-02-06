@@ -39,6 +39,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <string>
 #include <vector>
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
@@ -254,7 +255,7 @@ public:
     }
 
     if (opt.compare(0, i, "level") == 0) {
-      int level = stoi(opt.substr(i + 1));
+      int level = std::stoi(opt.substr(i + 1));
 
       if (level >= 1 && level <= 12) {
         z_level = level;
@@ -316,21 +317,21 @@ public:
     }
 
     if (opt.compare(0, i, "level") == 0) {
-      int level = stoi(opt.substr(i + 1));
+      int level = std::stoi(opt.substr(i + 1));
 
       if (level >= 0 && level <= 9) {
         z_level = level;
         return true;
       }
     } else if (opt.compare(0, i, "memlevel") == 0) {
-      int memlevel = stoi(opt.substr(i + 1));
+      int memlevel = std::stoi(opt.substr(i + 1));
 
       if (memlevel >= 1 && memlevel <= 9) {
         z_memLevel = memlevel;
         return true;
       }
     } else if (opt.compare(0, i, "strategy") == 0) {
-      int strategy = stoi(opt.substr(i + 1));
+      int strategy = std::stoi(opt.substr(i + 1));
 
       if (strategy == Z_DEFAULT_STRATEGY || strategy == Z_FILTERED
        || strategy == Z_HUFFMAN_ONLY || strategy == Z_RLE) {
@@ -338,7 +339,7 @@ public:
         return true;
       }
     } else if (opt.compare(0, i, "window") == 0) {
-      int windowbits = stoi(opt.substr(i + 1));
+      int windowbits = std::stoi(opt.substr(i + 1));
 
       if (windowbits >= 8 && windowbits <= 15) {
         z_windowBits = windowbits;
@@ -399,21 +400,21 @@ public:
     }
 
     if (opt.compare(0, i, "iter") == 0) {
-      int iter = stoi(opt.substr(i + 1));
+      int iter = std::stoi(opt.substr(i + 1));
 
       if (iter > 0) {
         zop_iter = iter;
         return true;
       }
     } else if (opt.compare(0, i, "maxsplit") == 0) {
-      int maxsplit = stoi(opt.substr(i + 1));
+      int maxsplit = std::stoi(opt.substr(i + 1));
 
       if (maxsplit >= 0) {
         zop_maxsplit = maxsplit;
         return true;
       }
     } else if (opt.compare(0, i, "verbose") == 0) {
-      int verbose = stoi(opt.substr(i + 1));
+      int verbose = std::stoi(opt.substr(i + 1));
 
       if (verbose >= 0 && verbose <= 2) {
         zop_verbose = verbose;
