@@ -69,8 +69,10 @@ target_include_directories(pngwolf
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/zopfli/src/zopfli>
 )
 
+target_compile_definitions(pngwolf PRIVATE ZLIB_CONST)
+
 if(MSVC)
-  target_compile_definitions(pngwolf PRIVATE _CRT_SECURE_NO_WARNINGS ZLIB_CONST)
+  target_compile_definitions(pngwolf PRIVATE _CRT_SECURE_NO_WARNINGS)
   target_link_libraries(pngwolf PRIVATE ws2_32)
 endif()
 
