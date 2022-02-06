@@ -30,15 +30,18 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CC: ${{ matrix.config.cc }}
+      CXX: ${{ matrix.config.cxx }}
 
     strategy:
       matrix:
         config:
           - name: Clang
             cc: clang
+            cxx: clang++
 
           - name: GCC
             cc: gcc
+            cxx: g++
 
     steps:
       - uses: actions/checkout@v2
