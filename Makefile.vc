@@ -27,8 +27,8 @@ objs_galib = galib\ga\GA1DArrayGenome.obj galib\ga\GAAllele.obj \
   galib\ga\garandom.obj galib\ga\gaerror.obj galib\ga\GAScaling.obj \
   galib\ga\GASelector.obj galib\ga\GAStatistics.obj
 
-objs_libdeflate = libdeflate\lib\adler32.obj libdeflate\lib\aligned_malloc.obj \
-  libdeflate\lib\deflate_compress.obj libdeflate\lib\x86\cpu_features.obj \
+objs_libdeflate = libdeflate\lib\adler32.obj libdeflate\lib\deflate_compress.obj \
+  libdeflate\lib\utils.obj libdeflate\lib\x86\cpu_features.obj \
   libdeflate\lib\zlib_compress.obj
 
 objs_zlib = zlib\adler32.obj zlib\crc32.obj zlib\deflate.obj zlib\compress.obj \

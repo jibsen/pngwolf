@@ -36,8 +36,8 @@ add_executable(pngwolf
   galib/ga/GASelector.C
   galib/ga/GAStatistics.C
   libdeflate/lib/adler32.c
-  libdeflate/lib/aligned_malloc.c
   libdeflate/lib/deflate_compress.c
+  libdeflate/lib/utils.c
   libdeflate/lib/x86/cpu_features.c
   libdeflate/lib/zlib_compress.c
   zlib/adler32.c
