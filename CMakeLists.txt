@@ -58,6 +58,7 @@ add_executable(pngwolf
 set_target_properties(pngwolf PROPERTIES
   CXX_STANDARD 14
   C_STANDARD 99
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE
 )
 
 target_include_directories(pngwolf
