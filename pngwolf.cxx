@@ -5,7 +5,7 @@
 // Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>
 //
 // Modified to use Zopfli for the final compression step
-// Copyright (C) 2015-2017 Joergen Ibsen
+// Copyright (C) 2015-2022 Joergen Ibsen
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -63,7 +63,7 @@
 #pragma warning(disable: 4100)
 #endif
 
-#define PNGWOLF_VERSION "1.1.2"
+#define PNGWOLF_VERSION "1.1.3"
 
 ////////////////////////////////////////////////////////////////////
 // Miscellaneous structures and types
@@ -184,9 +184,6 @@ public:
   //
   std::vector<unsigned char> best_inflated;
   std::vector<unsigned char> best_deflated;
-
-  // The genetic algorithm
-  GAGeneticAlgorithm* ga = nullptr;
 
   // Logging
   void log_analysis();
@@ -622,18 +619,18 @@ void unfilter_idat(unsigned char* idat, size_t rows, size_t pwidth, size_t bytes
   size_t row;
   for (row = 0; row < rows; ++row) {
     switch(idat[row*bytes]) {
-    case 0:
+    case None:
       break;
-    case 1:
+    case Sub:
       unfilter_row_sub(idat, row, pwidth, bytes);
       break;
-    case 2:
+    case Up:
       unfilter_row_up(idat, row, pwidth, bytes);
       break;
-    case 3:
+    case Avg:
       unfilter_row_avg(idat, row, pwidth, bytes);
       break;
-    case 4:
+    case Paeth:
       unfilter_row_paeth(idat, row, pwidth, bytes);
       break;
     default:
@@ -646,19 +643,19 @@ void unfilter_idat(unsigned char* idat, size_t rows, size_t pwidth, size_t bytes
 void filter_idat(unsigned char* src, unsigned char* dst, const PngFilterGenome& filter, size_t pwidth, size_t bytes) {
   for (int row = 0; row < filter.size(); ++row) {
     switch(filter.gene(row)) {
-    case 0:
+    case None:
       filter_row_none(src, dst, row, pwidth, bytes);
       break;
-    case 1:
+    case Sub:
       filter_row_sub(src, dst, row, pwidth, bytes);
       break;
-    case 2:
+    case Up:
       filter_row_up(src, dst, row, pwidth, bytes);
       break;
-    case 3:
+    case Avg:
       filter_row_avg(src, dst, row, pwidth, bytes);
       break;
-    case 4:
+    case Paeth:
       filter_row_paeth(src, dst, row, pwidth, bytes);
       break;
     default:
@@ -1297,11 +1294,6 @@ void PngWolf::run() {
   // but no scaling still seemed to work best for my samples.
   ga.scaling(GANoScaling());
 
-  // This is currently not used and maybe should not be used as the
-  // scoping slash ownership is unclear. It would work only during
-  // run() which is a bit non-intuitive, so TODO: maybe remove this.
-  this->ga = &ga;
-
   ga.crossover(PngFilterGenome::TwoPointCrossover);
 
   best_genomes.push_back(std::unique_ptr<PngFilterGenome>(
@@ -1356,8 +1348,6 @@ void PngWolf::run() {
   }
 
 after_while:
-  this->ga = nullptr;
-
   // Since we intercept CTRL+C the user should get some feedback
   // on that as soon as possible, so the log header comes here.
   fprintf(stdout, "---\n");
@@ -1918,7 +1908,7 @@ void show_version(void) {
     "Copyright (C) 2008-2011 Bjoern Hoehrmann <bjoern@hoehrmann.de>\n"
     "\n"
     "Modified to use Zopfli for the final compression step\n"
-    "Copyright (C) 2015-2017 Joergen Ibsen\n"
+    "Copyright (C) 2015-2022 Joergen Ibsen\n"
     "\n"
     "This is free software; see the source for copying conditions.\n"
     "There is NO WARRANTY, to the extent permitted by law.\n"
